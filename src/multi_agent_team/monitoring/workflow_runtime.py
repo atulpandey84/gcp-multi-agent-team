@@ -6,20 +6,20 @@ from typing import Any, Callable
 
 
 PILOT_STAGES = [
-    ("product_owner", "Shape the requirement", "senior_reasoning"),
-    ("project_manager", "Plan delivery and dependencies", "fast_agent"),
-    ("engineering_orchestrator", "Decompose the engineering workflow", "architecture_critical"),
-    ("solution_architect", "Design the application solution", "architecture_critical"),
-    ("platform_architect", "Assess Landing Zone fit", "architecture_critical"),
-    ("security_architect", "Review threats and controls", "senior_reasoning"),
-    ("finops_engineer", "Assess cost and budget impact", "fast_agent"),
-    ("devops_lead", "Define delivery automation", "senior_reasoning"),
-    ("cloud_infrastructure_engineer", "Prepare infrastructure as code", "coding"),
-    ("cicd_engineer", "Build the promotion pipeline", "fast_coding"),
-    ("sre_observability_engineer", "Configure SLOs and telemetry", "senior_reasoning"),
-    ("qa_lead", "Validate quality gates", "senior_reasoning"),
-    ("application_management_lead", "Confirm operational readiness", "fast_agent"),
-    ("engineering_orchestrator", "Package evidence and close the workflow", "architecture_critical"),
+    ("product_owner", "Product", "Shape the requirement & acceptance criteria", "senior_reasoning", "Approved business requirements & acceptance criteria"),
+    ("project_manager", "Delivery", "Plan delivery timeline, risks & dependencies", "fast_agent", "RAID log and delivery schedule created"),
+    ("engineering_orchestrator", "Engineering Governance", "Decompose engineering tasks and select specialist agents", "architecture_critical", "Task graph & agent delegation plan finalized"),
+    ("solution_architect", "Architecture", "Design solution architecture & NFR matrix", "architecture_critical", "HLD, API contract & NFR matrix drafted"),
+    ("platform_architect", "Architecture", "Assess Landing Zone fit & network topology", "architecture_critical", "Shared VPC & Terraform module design approved"),
+    ("security_architect", "Architecture", "Conduct threat model & establish Zero Trust controls", "senior_reasoning", "Security controls & KMS encryption policy verified"),
+    ("finops_engineer", "DevOps", "Assess cloud cost & budget impact", "fast_agent", "Cost estimate & resource optimization approved"),
+    ("devops_lead", "DevOps", "Define GitOps deployment strategy", "senior_reasoning", "Deployment standards & environment gates set"),
+    ("cloud_infrastructure_engineer", "DevOps", "Draft Terraform IaC modules for cloud resources", "coding", "Terraform / IaC modules validated with static checks"),
+    ("cicd_engineer", "DevOps", "Configure CI/CD promotion pipelines & artifact registry", "fast_coding", "Cloud Build pipelines and security scans ready"),
+    ("sre_observability_engineer", "DevOps", "Configure SLOs, alerts & monitoring dashboards", "senior_reasoning", "Cloud Monitoring dashboards & alert policies configured"),
+    ("qa_lead", "Testing", "Verify quality gates & automated test suites", "senior_reasoning", "All functional and regression test gates passed"),
+    ("application_management_lead", "Application Management", "Confirm operational readiness & support runbooks", "fast_agent", "Operational readiness checklist approved"),
+    ("engineering_orchestrator", "Engineering Governance", "Package evidence, verify audit trail & complete release", "architecture_critical", "Landing Zone application environment fully provisioned"),
 ]
 
 
@@ -27,8 +27,10 @@ PILOT_STAGES = [
 class WorkflowTask:
     id: str
     agent_id: str
+    team: str
     title: str
     model_policy: str
+    output_summary: str = ""
     status: str = "queued"
     progress: int = 0
     started_at: str | None = None
@@ -69,9 +71,28 @@ class WorkflowRuntime:
 
     def create_run(self, objective: str) -> dict[str, Any]:
         run_id = str(uuid.uuid4())
+
+        is_azure = "azure" in objective.lower()
+        cloud_provider = "Azure" if is_azure else ("GCP" if "gcp" in objective.lower() else "Cloud")
+
+        custom_stages = []
+        for agent_id, team, title, model, output_summary in PILOT_STAGES:
+            c_title = title.replace("GCP", cloud_provider).replace("cloud", cloud_provider.lower())
+            c_summary = output_summary.replace("GCP", cloud_provider)
+            if is_azure and "Shared VPC" in c_summary:
+                c_summary = c_summary.replace("Shared VPC", "Azure VNet / Hub-and-Spoke")
+            custom_stages.append((agent_id, team, c_title, model, c_summary))
+
         tasks = [
-            WorkflowTask(id=f"{run_id[:8]}-{index + 1}", agent_id=agent_id, title=title, model_policy=model)
-            for index, (agent_id, title, model) in enumerate(PILOT_STAGES)
+            WorkflowTask(
+                id=f"{run_id[:8]}-{index + 1}",
+                agent_id=agent_id,
+                team=team,
+                title=title,
+                model_policy=model,
+                output_summary=output_summary,
+            )
+            for index, (agent_id, team, title, model, output_summary) in enumerate(custom_stages)
         ]
         run = WorkflowRun(id=run_id, objective=objective, tasks=tasks)
         self._runs[run_id] = run
@@ -90,19 +111,32 @@ class WorkflowRuntime:
         run.status = "running"
         self._emit(run, "workflow_started", {})
         try:
-            for task in run.tasks:
+            for index, task in enumerate(run.tasks):
                 run.current_task_id = task.id
                 task.status = "running"
                 task.started_at = datetime.now(timezone.utc).isoformat()
-                self._emit(run, "task_started", {"task_id": task.id})
-                for progress in range(20, 101, 20):
-                    await asyncio.sleep(0.25)
+                self._emit(run, "task_started", {"task_id": task.id, "agent_id": task.agent_id, "team": task.team})
+
+                next_task = run.tasks[index + 1] if index + 1 < len(run.tasks) else None
+                collaboration_msg = {
+                    "sender": task.agent_id,
+                    "sender_team": task.team,
+                    "receiver": next_task.agent_id if next_task else "system",
+                    "receiver_team": next_task.team if next_task else "Governance",
+                    "action": task.title,
+                    "artifact": task.output_summary,
+                }
+                self._emit(run, "collaboration_message", collaboration_msg)
+
+                for progress in range(25, 101, 25):
+                    await asyncio.sleep(0.12)
                     task.progress = progress
-                    run.progress = round(((run.tasks.index(task) + progress / 100) / len(run.tasks)) * 100)
-                    self._emit(run, "task_progress", {"task_id": task.id, "progress": progress})
+                    run.progress = round(((index + progress / 100) / len(run.tasks)) * 100)
+                    self._emit(run, "task_progress", {"task_id": task.id, "agent_id": task.agent_id, "progress": progress})
+
                 task.status = "completed"
                 task.completed_at = datetime.now(timezone.utc).isoformat()
-                self._emit(run, "task_completed", {"task_id": task.id})
+                self._emit(run, "task_completed", {"task_id": task.id, "agent_id": task.agent_id, "output": task.output_summary})
             run.status = "completed"
             run.progress = 100
             run.current_task_id = None

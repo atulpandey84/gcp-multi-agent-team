@@ -94,5 +94,63 @@ function renderTimeline() {
 async function loadData() { [agents, currentRun] = await Promise.all([api('/api/agents'), api('/api/workflows').then(runs => runs.at(-1) || null)]); const models = await api('/api/models'); document.getElementById('modelCount').textContent = models.length; document.getElementById('models').innerHTML = models.map(model => `<div class="model"><span class="model-dot"></span><div><b>${escapeHtml(model.policy)}</b><small>${escapeHtml(model.model)}</small></div></div>`).join(''); renderRun(); renderTimeline(); }
 function connect() { const key = document.getElementById('apiKey').value; const token = document.getElementById('token').value; const query = token ? `?token=${encodeURIComponent(token)}` : (key ? `?api_key=${encodeURIComponent(key)}` : ''); if (ws) ws.close(); ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws/agents${query}`); ws.onopen = () => { document.getElementById('connectionDot').classList.add('online'); document.getElementById('connectionText').textContent = 'Live'; loadData().catch(() => {}); }; ws.onclose = () => { document.getElementById('connectionDot').classList.remove('online'); document.getElementById('connectionText').textContent = 'Disconnected'; }; ws.onmessage = event => { const message = JSON.parse(event.data); if (message.run) { currentRun = message.run; renderRun(); renderTimeline(); } }; }
 document.getElementById('connect').addEventListener('click', connect);
-document.getElementById('launch').addEventListener('click', async () => { try { currentRun = await api('/api/workflows', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({objective: 'Provision a new non-production GCP application environment using the approved Landing Zone.'})}); renderRun(); renderTimeline(); } catch (error) { alert('Launch failed. Connect with an operator API key.'); } });
+if (document.getElementById('connectBtnHeader')) {
+  document.getElementById('connectBtnHeader').addEventListener('click', connect);
+}
+
+async function submitRequirement(reqText) {
+  const text = reqText || document.getElementById('chatInput')?.value?.trim();
+  if (!text) return;
+
+  const historyEl = document.getElementById('chatHistory');
+  if (historyEl) {
+    historyEl.innerHTML += `<div class="chat-bubble user">
+      <span class="chat-author">Executive Business Partner</span>
+      <p>${escapeHtml(text)}</p>
+    </div>`;
+    historyEl.scrollTop = historyEl.scrollHeight;
+  }
+
+  if (document.getElementById('chatInput')) {
+    document.getElementById('chatInput').value = '';
+  }
+
+  try {
+    currentRun = await api('/api/workflows', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({objective: text})
+    });
+
+    if (historyEl) {
+      historyEl.innerHTML += `<div class="chat-bubble po">
+        <span class="chat-author">Product Owner & Project Manager</span>
+        <p>Requirement accepted! Initiating task graph decomposition and multi-agent team alignment for: <i>"${escapeHtml(text)}"</i>.</p>
+      </div>`;
+      historyEl.scrollTop = historyEl.scrollHeight;
+    }
+
+    renderRun();
+    renderTimeline();
+  } catch (error) {
+    if (historyEl) {
+      historyEl.innerHTML += `<div class="chat-bubble error">
+        <span class="chat-author">System Error</span>
+        <p>Could not submit requirement. Please ensure you are connected with an operator or admin API key/token.</p>
+      </div>`;
+      historyEl.scrollTop = historyEl.scrollHeight;
+    }
+  }
+}
+
+const sendChatBtn = document.getElementById('sendChatBtn');
+if (sendChatBtn) {
+  sendChatBtn.addEventListener('click', () => submitRequirement());
+}
+const chatInput = document.getElementById('chatInput');
+if (chatInput) {
+  chatInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') submitRequirement();
+  });
+}
 

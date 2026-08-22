@@ -15,8 +15,36 @@
   </header>
   <main>
     <section class="command">
-      <div><span class="eyebrow">PILOT WORKFLOW</span><h2>Provision a non-production environment</h2><p>Governed handoffs from product intent to operational readiness.</p></div>
-      <div class="launch"><input id="apiKey" type="password" placeholder="Monitoring API key" aria-label="Monitoring API key" /><input id="token" type="password" placeholder="Operator bearer token (optional)" aria-label="Operator bearer token" /><button id="launch">Launch workflow</button></div>
+      <div>
+        <span class="eyebrow">EXECUTIVE CHAT & BUSINESS PARTNER HANDOFF</span>
+        <h2>Multi-Agent Engineering Organization</h2>
+        <p>Pass high-level business requirements directly to the Product Owner & Project Manager.</p>
+      </div>
+      <div class="launch">
+        <input id="apiKey" type="password" placeholder="Monitoring API key" aria-label="Monitoring API key" />
+        <input id="token" type="password" placeholder="Operator bearer token (optional)" aria-label="Operator bearer token" />
+        <button id="connectBtnHeader">Connect</button>
+      </div>
+    </section>
+
+    <section class="panel chat-panel">
+      <div class="panel-head">
+        <div>
+          <span class="eyebrow">BUSINESS PARTNER INTERFACE</span>
+          <h2>Executive Requirement Chat</h2>
+        </div>
+        <span class="badge">Live Chat Handoff</span>
+      </div>
+      <div id="chatHistory" class="chat-history">
+        <div class="chat-bubble system">
+          <span class="chat-author">System / Product Owner</span>
+          <p>Welcome, Executive Partner! Enter your architectural requirement below (e.g. <i>"I want a full fledged architecturally secure and hardened GCP landing zone or azure landing zone"</i>) to initiate team execution.</p>
+        </div>
+      </div>
+      <div class="chat-input-row">
+        <input id="chatInput" type="text" placeholder="Type your requirement (e.g., 'I want a full fledged architecturally secure and hardened GCP landing zone')..." aria-label="Chat Requirement Input" />
+        <button id="sendChatBtn">Submit Requirement</button>
+      </div>
     </section>
     <section class="metrics">
       <div><span>RUN PROGRESS</span><strong id="runProgress">0%</strong></div>

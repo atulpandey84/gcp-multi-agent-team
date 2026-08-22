@@ -9,6 +9,18 @@ h1,h2,h3,p { margin:0; } h1 { font-size:clamp(24px,4vw,48px); letter-spacing:-1p
 button { border:0; background:var(--ink); color:white; padding:12px 16px; border-radius:4px; font:600 12px Manrope; cursor:pointer; } button:hover { background:#32423d; }
 .command, .panel { background:var(--panel); border:1px solid var(--line); border-radius:8px; } .command { display:flex; justify-content:space-between; align-items:center; gap:24px; padding:28px; } .command p { color:var(--muted); margin-top:8px; }
 .launch { display:flex; gap:8px; } input { border:1px solid var(--line); padding:12px; border-radius:4px; font:12px Manrope; min-width:220px; }
+.chat-panel { margin-top:18px; }
+.chat-history { height:180px; overflow-y:auto; border:1px solid var(--line); background:#fafbfa; border-radius:5px; padding:12px; display:flex; flex-direction:column; gap:10px; }
+.chat-bubble { max-width:85%; padding:10px 14px; border-radius:8px; font-size:13px; line-height:1.4; }
+.chat-bubble.system { background:#edf1ed; color:var(--ink); align-self:flex-start; border:1px solid var(--line); }
+.chat-bubble.user { background:#17211f; color:white; align-self:flex-end; }
+.chat-bubble.po { background:#e8f4ec; color:#14532d; align-self:flex-start; border:1px solid #bbf7d0; }
+.chat-bubble.error { background:#fef2f2; color:#991b1b; align-self:flex-start; border:1px solid #fecaca; }
+.chat-author { font:600 10px 'DM Mono'; text-transform:uppercase; letter-spacing:0.5px; opacity:0.8; display:block; margin-bottom:4px; }
+.chat-input-row { display:flex; gap:10px; margin-top:12px; }
+.chat-input-row input { flex:1; border:1px solid var(--line); padding:12px 14px; border-radius:4px; font:13px Manrope; }
+.chat-input-row button { background:var(--ink); color:white; border-radius:4px; font-weight:600; white-space:nowrap; }
+
 .metrics { display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:var(--line); margin:18px 0; border:1px solid var(--line); } .metrics div { background:var(--panel); padding:18px 20px; } .metrics strong { display:block; font-size:25px; margin-top:7px; }
 .workspace { display:grid; grid-template-columns:minmax(0,2fr) minmax(280px,1fr); gap:18px; } .panel { padding:22px; } .panel-head { display:flex; justify-content:space-between; align-items:start; margin-bottom:18px; } .badge, .status { border-radius:99px; padding:5px 8px; background:#edf1ed; color:var(--muted); font:500 10px 'DM Mono'; text-transform:uppercase; } .status.working { background:var(--mint); color:#167346; }
 .agent-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:10px; } .agent-card { border:1px solid var(--line); padding:15px; border-radius:5px; min-height:145px; } .agent-card.working { border-color:#70d99c; box-shadow:inset 3px 0 #37bd75; } .agent-top, .task-label { display:flex; justify-content:space-between; align-items:center; } .avatar { display:grid; place-items:center; width:31px; height:31px; background:#e7ece6; border-radius:50%; color:#4e625b; font:500 11px 'DM Mono'; } .agent-card p { color:var(--muted); font-size:11px; margin-top:5px; min-height:32px; } .task-label { color:var(--muted); font:10px 'DM Mono'; margin-top:14px; } .task-label b { color:var(--ink); } .bar { height:4px; background:#e8ece7; margin-top:7px; } .bar i { display:block; height:100%; background:var(--coral); transition:width .3s ease; } .idle-line { color:#abb5af; font:10px 'DM Mono'; margin-top:18px; }
