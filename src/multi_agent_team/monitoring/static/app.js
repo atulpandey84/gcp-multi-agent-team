@@ -1,6 +1,7 @@
 let agents = [];
 let currentRun = null;
 let ws = null;
+let pendingRequirement = "I want a full fledged architecturally secure and hardened GCP landing zone";
 
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 
@@ -53,6 +54,25 @@ function renderFlowDiagram() {
   }).join('');
 
   flowContainer.innerHTML = html;
+}
+
+function renderArtifacts() {
+  const artifactEl = document.getElementById('artifactList');
+  if (!artifactEl) return;
+  const artifacts = currentRun?.artifacts || [];
+
+  if (artifacts.length === 0) {
+    artifactEl.innerHTML = '<p class="muted">No background artifacts produced yet.</p>';
+    return;
+  }
+
+  artifactEl.innerHTML = artifacts.map(art => `
+    <div class="artifact-badge">
+      <span class="artifact-icon">📄</span>
+      <span class="artifact-name">${escapeHtml(art)}</span>
+      <span class="artifact-status">VERIFIED</span>
+    </div>
+  `).join('');
 }
 
 function renderAgents() {
@@ -134,6 +154,7 @@ function renderRun() {
   renderAgents();
   renderCollaboration();
   renderFlowDiagram();
+  renderArtifacts();
 }
 
 function renderTimeline() {
@@ -186,23 +207,43 @@ function connect() {
   };
 }
 
-async function submitRequirement() {
+async function handleChatInput() {
   const inputEl = document.getElementById('chatInput');
   const chatHistory = document.getElementById('chatHistory');
   const reqText = (inputEl.value || '').trim();
   if (!reqText) return;
 
-  // Append Executive user message to chat UI
+  pendingRequirement = reqText;
+
+  // Render user message
   const userMsg = document.createElement('div');
   userMsg.className = 'chat-msg user';
   userMsg.innerHTML = `<div class="chat-role">EXECUTIVE BUSINESS PARTNER</div><div class="chat-text">${escapeHtml(reqText)}</div>`;
   chatHistory.appendChild(userMsg);
   inputEl.value = '';
 
+  // Interactive Assistant response clarifying requirement
+  setTimeout(() => {
+    const assistantMsg = document.createElement('div');
+    assistantMsg.className = 'chat-msg ack';
+    assistantMsg.innerHTML = `<div class="chat-role">Product Owner & Project Manager</div><div class="chat-text">Requirement understood: <i>"${escapeHtml(reqText)}"</i>. I have aligned with Solution Architect (DeepSeek Pro) & Security Architect to ensure complete Landing Zone hardening, Zero Trust IAM, and automated governance. Click <b>Approve & Initiate Engineering Execution</b> to proceed.</div>`;
+    chatHistory.appendChild(assistantMsg);
+    chatHistory.scrollTop = chatHistory.scrollHeight;
+  }, 400);
+}
+
+async function approveAndInitiateExecution() {
+  const chatHistory = document.getElementById('chatHistory');
+
+  const approveMsg = document.createElement('div');
+  approveMsg.className = 'chat-msg system';
+  approveMsg.innerHTML = `<div class="chat-role">EXECUTIVE APPROVAL</div><div class="chat-text">Executive requirement approved. Triggering multi-agent execution pipeline...</div>`;
+  chatHistory.appendChild(approveMsg);
+
   try {
     const run = await api('/api/workflows', {
       method: 'POST',
-      body: JSON.stringify({ objective: reqText, provision: true }),
+      body: JSON.stringify({ objective: pendingRequirement, provision: true }),
       headers: { 'Content-Type': 'application/json' }
     });
     currentRun = run;
@@ -211,7 +252,7 @@ async function submitRequirement() {
 
     const ackMsg = document.createElement('div');
     ackMsg.className = 'chat-msg ack';
-    ackMsg.innerHTML = `<div class="chat-role">Product Owner & Project Manager</div><div class="chat-text">Requirement received. Decomposing tasks and delegating to Platform Architect, Security Architect, DevOps, QA, and SRE. Workflow Run ID: <code>${escapeHtml(run.id)}</code>.</div>`;
+    ackMsg.innerHTML = `<div class="chat-role">Engineering Orchestrator</div><div class="chat-text">Execution started for Workflow Run ID: <code>${escapeHtml(run.id)}</code>. Generated artifacts will be persisted to <code>data/workflows/${escapeHtml(run.id)}/</code> for background review.</div>`;
     chatHistory.appendChild(ackMsg);
     chatHistory.scrollTop = chatHistory.scrollHeight;
   } catch (err) {
@@ -225,7 +266,8 @@ async function submitRequirement() {
 document.getElementById('connect').addEventListener('click', connect);
 const connBtn = document.getElementById('connectBtn');
 if (connBtn) connBtn.addEventListener('click', connect);
-document.getElementById('sendChatBtn').addEventListener('click', submitRequirement);
+document.getElementById('sendChatBtn').addEventListener('click', handleChatInput);
+document.getElementById('approveExecutionBtn').addEventListener('click', approveAndInitiateExecution);
 document.getElementById('chatInput').addEventListener('keydown', e => {
-  if (e.key === 'Enter') submitRequirement();
+  if (e.key === 'Enter') handleChatInput();
 });

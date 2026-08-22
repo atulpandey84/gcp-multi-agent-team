@@ -31,17 +31,20 @@
     <section class="panel chat-panel">
       <div class="panel-head">
         <div><span class="eyebrow">BUSINESS PARTNER INTERFACE</span><h2>Executive Requirement Chat</h2></div>
-        <span class="badge live-badge">LIVE CHAT HANDOFF</span>
+        <div class="chat-actions">
+          <span class="badge live-badge">INTERACTIVE DIALOGUE</span>
+          <button id="approveExecutionBtn" class="btn-approve">Approve & Initiate Engineering Execution</button>
+        </div>
       </div>
       <div id="chatHistory" class="chat-history">
         <div class="chat-msg system">
           <div class="chat-role">Product Owner & Project Manager Assistant</div>
-          <div class="chat-text">Welcome, Executive Business Partner. Type your requirement prompt below (e.g., <i>"I want a full fledged architecturally secure and hardened GCP landing zone or azure landing zone"</i>) to initiate team execution.</div>
+          <div class="chat-text">Welcome, Executive Business Partner. Chat interactively below to refine requirements (e.g., <i>"I want a full fledged architecturally secure and hardened GCP landing zone or azure landing zone"</i>). Click <b>Approve & Initiate Engineering Execution</b> when you are ready to start task graph execution.</div>
         </div>
       </div>
       <div class="chat-input-row">
-        <input id="chatInput" type="text" placeholder="Type your requirement (e.g., 'I want a full fledged architecturally secure and hardened GCP landing zone')..." />
-        <button id="sendChatBtn">Submit Requirement</button>
+        <input id="chatInput" type="text" placeholder="Type your requirement or question (e.g., 'I want a full fledged architecturally secure and hardened GCP landing zone')..." />
+        <button id="sendChatBtn">Send Requirement</button>
       </div>
     </section>
 
@@ -51,6 +54,14 @@
         <div><span class="eyebrow">GOVERNED STAGE FLOW</span><h2>Workflow Execution DAG Diagram</h2></div>
       </div>
       <div id="workflowFlowDiagram" class="flow-diagram"></div>
+    </section>
+
+    <!-- Artifacts & Evidence Panel -->
+    <section class="panel artifacts-panel">
+      <div class="panel-head">
+        <div><span class="eyebrow">BACKGROUND ARTIFACTS & EVIDENCE</span><h2>Generated Architectural Artifacts & Audit Logs</h2></div>
+      </div>
+      <div id="artifactList" class="artifact-list"><p class="muted">No background artifacts produced yet.</p></div>
     </section>
 
     <section class="metrics">
