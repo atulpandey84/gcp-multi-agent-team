@@ -32,6 +32,16 @@ button:hover { opacity: 0.9; }
 .btn-approve { background: var(--accent); color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 700; cursor: pointer; }
 .btn-approve:hover { background: #059669; }
 
+.btn-stop { background: #ef4444; color: #ffffff; border: none; padding: 0.5rem 1rem; font-weight: 700; border-radius: 6px; cursor: pointer; transition: background 0.2s; font-size: 0.85rem; }
+.btn-stop:hover { background: #dc2626; }
+
+.log-console { background: #090d16; border: 1px solid #1f293d; border-radius: 6px; padding: 0.75rem; max-height: 200px; overflow-y: auto; font-family: 'DM Mono', monospace; font-size: 0.8rem; color: #94a3b8; margin-bottom: 1rem; }
+.log-entry { margin-bottom: 0.35rem; line-height: 1.4; word-break: break-all; }
+.log-entry .log-time { color: #64748b; margin-right: 0.5rem; }
+.log-entry .log-type { color: #38bdf8; font-weight: 600; margin-right: 0.5rem; }
+.log-entry.error .log-type { color: #f87171; }
+.log-entry.completed .log-type { color: #34d399; }
+
 .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; }
 .panel-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; }
 

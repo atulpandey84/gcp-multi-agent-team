@@ -125,6 +125,20 @@ def get_workflow(run_id: str, dep=Depends(require_auth)):
     return run
 
 
+@app.post("/api/workflows/stop_all")
+async def stop_all_workflows(dep=Depends(require_role(['operator', 'admin']))):
+    stopped = await workflow_runtime.stop_all_runs()
+    return {"ok": True, "stopped_count": stopped}
+
+
+@app.post("/api/workflows/{run_id}/stop")
+async def stop_workflow(run_id: str, dep=Depends(require_role(['operator', 'admin']))):
+    ok = await workflow_runtime.stop_run(run_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="workflow run not found")
+    return {"ok": True, "run_id": run_id}
+
+
 @app.post("/api/agents/{agent_id}/start")
 def start_agent(agent_id: str, dep=Depends(require_role(['operator','admin']))):
     # check agent contract for human_approval requirement
@@ -316,7 +330,7 @@ def create_token(payload: dict, request: Request):
     key = settings.api_key or os.getenv('MONITORING_API_KEY')
     if key and x_api_key != key:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
-    role = payload.get('role') if isinstance(payload, dict) else None
+    role = payload.get('role')
     if not role:
         raise HTTPException(status_code=400, detail='role required')
     # allowed roles

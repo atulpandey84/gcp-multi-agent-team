@@ -168,6 +168,32 @@ class WorkflowRuntime:
             self._workers[run_id] = asyncio.create_task(self._execute(self._runs[run_id]))
         return True
 
+    async def stop_run(self, run_id: str) -> bool:
+        run = self._runs.get(run_id)
+        if not run:
+            return False
+        worker = self._workers.get(run_id)
+        if worker and not worker.done():
+            worker.cancel()
+            try:
+                await worker
+            except asyncio.CancelledError:
+                pass
+        run.status = "cancelled"
+        run.current_task_id = None
+        self._emit(run, "workflow_cancelled", {"run_id": run_id})
+        return True
+
+    async def stop_all_runs(self) -> int:
+        stopped = 0
+        for run_id in list(self._workers.keys()):
+            if await self.stop_run(run_id):
+                stopped += 1
+        return stopped
+
+    def clear_runs(self) -> None:
+        self._runs.clear()
+
     async def _execute(self, run: WorkflowRun) -> None:
         run.status = "running"
         self._emit(run, "workflow_started", {})

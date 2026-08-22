@@ -1,13 +1,26 @@
 let agents = [];
 let currentRun = null;
 let ws = null;
+let logs = [];
 let pendingRequirement = "I want a full fledged architecturally secure and hardened GCP landing zone";
 
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 
+function getSavedApiKey() {
+  return localStorage.getItem('monitoring_api_key') || '';
+}
+
+function saveApiKey(key) {
+  if (key) {
+    localStorage.setItem('monitoring_api_key', key);
+  } else {
+    localStorage.removeItem('monitoring_api_key');
+  }
+}
+
 function headers() {
   const h = {};
-  const key = document.getElementById('apiKey').value;
+  const key = document.getElementById('apiKey').value || getSavedApiKey();
   if (key) {
     if (key.startsWith('ey') || key.length > 50) {
       h.Authorization = `Bearer ${key}`;
@@ -224,6 +237,30 @@ function renderCollaboration() {
   }).join('');
 }
 
+function renderLogConsole() {
+  const logEl = document.getElementById('logConsole');
+  if (!logEl) return;
+  const events = currentRun?.events || [];
+  if (events.length === 0) {
+    logEl.innerHTML = '<p class="muted">Connect to stream execution logs.</p>';
+    return;
+  }
+
+  logEl.innerHTML = events.slice(-30).map(event => {
+    const time = new Date(event.run?.updated_at || Date.now()).toLocaleTimeString();
+    const type = event.type || 'INFO';
+    const isError = type.includes('failed') || type.includes('cancelled');
+    const isCompleted = type.includes('completed');
+    const details = JSON.stringify(event.details || {});
+    return `<div class="log-entry ${isError ? 'error' : (isCompleted ? 'completed' : '')}">
+      <span class="log-time">[${escapeHtml(time)}]</span>
+      <span class="log-type">[${escapeHtml(type.toUpperCase())}]</span>
+      <span class="log-msg">${escapeHtml(details)}</span>
+    </div>`;
+  }).join('');
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
 function renderRun() {
   if (!currentRun) return;
   document.getElementById('runProgress').textContent = `${currentRun.progress}%`;
@@ -233,6 +270,7 @@ function renderRun() {
   renderFlowDiagram();
   renderWaterfall();
   renderArtifacts();
+  renderLogConsole();
 }
 
 function renderTimeline() {
@@ -261,7 +299,13 @@ async function loadData() {
 }
 
 function connect() {
-  const key = document.getElementById('apiKey').value;
+  const keyInput = document.getElementById('apiKey');
+  const key = keyInput.value.trim() || getSavedApiKey();
+  if (keyInput.value.trim()) {
+    saveApiKey(keyInput.value.trim());
+  } else if (key) {
+    keyInput.value = key;
+  }
   const query = key ? (key.startsWith('ey') || key.length > 50 ? `?token=${encodeURIComponent(key)}` : `?api_key=${encodeURIComponent(key)}`) : '';
   if (ws) ws.close();
   ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws/agents${query}`);
@@ -307,6 +351,28 @@ async function handleChatInput() {
   }, 400);
 }
 
+async function stopTasksAndReset() {
+  const chatHistory = document.getElementById('chatHistory');
+  try {
+    await api('/api/workflows/stop_all', { method: 'POST' });
+    const stopMsg = document.createElement('div');
+    stopMsg.className = 'chat-msg system';
+    stopMsg.innerHTML = `<div class="chat-role">SYSTEM CONTROL</div><div class="chat-text">Active multi-agent execution tasks stopped. Requirement session reset.</div>`;
+    chatHistory.appendChild(stopMsg);
+
+    pendingRequirement = "I want a full fledged architecturally secure and hardened GCP landing zone";
+    const inputEl = document.getElementById('chatInput');
+    if (inputEl) inputEl.value = '';
+
+    await loadData();
+  } catch (err) {
+    const errMsg = document.createElement('div');
+    errMsg.className = 'chat-msg error';
+    errMsg.innerHTML = `<div class="chat-role">SYSTEM ERROR</div><div class="chat-text">Could not stop tasks: ${escapeHtml(err.message)}</div>`;
+    chatHistory.appendChild(errMsg);
+  }
+}
+
 async function approveAndInitiateExecution() {
   const chatHistory = document.getElementById('chatHistory');
 
@@ -342,7 +408,17 @@ const connBtn = document.getElementById('connectBtn');
 if (connBtn) connBtn.addEventListener('click', connect);
 document.getElementById('sendChatBtn').addEventListener('click', handleChatInput);
 document.getElementById('approveExecutionBtn').addEventListener('click', approveAndInitiateExecution);
+document.getElementById('stopResetBtn').addEventListener('click', stopTasksAndReset);
 document.getElementById('closeModalBtn').addEventListener('click', closeAgentModal);
 document.getElementById('chatInput').addEventListener('keydown', e => {
   if (e.key === 'Enter') handleChatInput();
+});
+
+// Auto-connect on page load if key saved
+window.addEventListener('DOMContentLoaded', () => {
+  const savedKey = getSavedApiKey();
+  if (savedKey) {
+    document.getElementById('apiKey').value = savedKey;
+  }
+  connect();
 });
