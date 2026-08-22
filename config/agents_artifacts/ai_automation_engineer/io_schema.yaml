@@ -1,0 +1,12 @@
+message_schema:
+  inputs:
+    - name: goal
+      type: string
+  outputs:
+    - name: prompt
+      type: string
+    - name: tools
+      type: list
+      items: string
+    - name: io_schema
+      type: object

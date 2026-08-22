@@ -1,22 +1,89 @@
 agents:
-  engineering_orchestrator: {name: Engineering Orchestrator, team: leadership, model_policy: architecture_critical}
-  product_owner: {name: Product Owner / Project Manager, team: product, model_policy: senior_reasoning}
-  platform_architect: {name: Platform Architect, team: architecture, model_policy: senior_reasoning}
-  solution_architect: {name: Solution Architect, team: architecture, model_policy: architecture_critical}
-  security_architect: {name: Security Architect, team: architecture, model_policy: senior_reasoning}
-  devops_lead: {name: DevOps Lead, team: devops, model_policy: senior_reasoning}
-  cloud_infrastructure_engineer: {name: Cloud Infrastructure Engineer, team: devops, model_policy: coding}
-  cicd_engineer: {name: CI/CD Engineer, team: devops, model_policy: coding}
-  sre_engineer: {name: SRE / Observability Engineer, team: devops, model_policy: senior_reasoning}
-  finops_engineer: {name: FinOps Engineer, team: devops, model_policy: senior_reasoning}
-  development_lead: {name: Development Lead, team: development, model_policy: coding}
-  frontend_engineer: {name: Frontend Engineer, team: development, model_policy: coding}
-  backend_engineer: {name: Backend Engineer, team: development, model_policy: coding}
-  integration_engineer: {name: Integration Engineer, team: development, model_policy: coding}
-  ai_automation_engineer: {name: AI / Automation Engineer, team: development, model_policy: coding}
-  qa_lead: {name: QA Lead, team: testing, model_policy: senior_reasoning}
-  test_automation_engineer: {name: Test Automation Engineer, team: testing, model_policy: fast_coding}
-  nfr_test_engineer: {name: NFR Test Engineer, team: testing, model_policy: senior_reasoning}
-  application_management_lead: {name: Application Management Lead, team: operations, model_policy: senior_reasoning}
-  application_support_engineer: {name: Application Support Engineer, team: operations, model_policy: fast_agent}
-  production_reliability_engineer: {name: Production Reliability Engineer, team: operations, model_policy: senior_reasoning}
+  - id: product_owner
+    role: Product Owner
+    team: Product
+    mission: "Own product vision, business value, scope, prioritization"
+  - id: project_manager
+    role: Project Manager
+    team: Delivery
+    mission: "Delivery coordination, planning, risk management"
+  - id: engineering_orchestrator
+    role: Engineering Orchestrator
+    team: Engineering Governance
+    mission: "Orchestrate engineering workflows and approvals"
+  - id: platform_architect
+    role: Platform Architect
+    team: Architecture
+    mission: "Platform architecture and design"
+  - id: solution_architect
+    role: Solution Architect
+    team: Architecture
+    mission: "Solution-level architecture and trade-offs"
+  - id: security_architect
+    role: Security Architect
+    team: Architecture
+    mission: "Security design and reviews"
+  - id: devops_lead
+    role: DevOps Lead
+    team: DevOps
+    mission: "DevOps strategy and CI/CD"
+  - id: cloud_infrastructure_engineer
+    role: Cloud Infrastructure Engineer
+    team: DevOps
+    mission: "Cloud infra implementation"
+  - id: cicd_engineer
+    role: CI/CD Engineer
+    team: DevOps
+    mission: "Pipelines and automation"
+  - id: sre_observability_engineer
+    role: SRE / Observability Engineer
+    team: DevOps
+    mission: "SRE and telemetry"
+  - id: finops_engineer
+    role: FinOps Engineer
+    team: DevOps
+    mission: "Cost control and reporting"
+  - id: development_lead
+    role: Development Lead
+    team: Development
+    mission: "Development delivery"
+  - id: frontend_engineer
+    role: Frontend Engineer
+    team: Development
+    mission: "Frontend implementation"
+  - id: backend_engineer
+    role: Backend Engineer
+    team: Development
+    mission: "Backend implementation"
+  - id: integration_engineer
+    role: Integration Engineer
+    team: Development
+    mission: "System integration"
+  - id: ai_automation_engineer
+    role: AI / Automation Engineer
+    team: Development
+    mission: "Automation and agents"
+  - id: qa_lead
+    role: QA Lead
+    team: Testing
+    mission: "Quality assurance"
+  - id: test_automation_engineer
+    role: Test Automation Engineer
+    team: Testing
+    mission: "Test automation"
+  - id: nfr_test_engineer
+    role: Non-Functional Test Engineer
+    team: Testing
+    mission: "Performance and reliability testing"
+  - id: application_management_lead
+    role: Application Management Lead
+    team: Application Management
+    mission: "Application lifecycle management"
+  - id: application_support_engineer
+    role: L2/L3 Application Support Engineer
+    team: Application Management
+    mission: "Support and incident handling"
+  - id: production_reliability_engineer
+    role: Production Reliability Engineer
+    team: Application Management
+    mission: "Production reliability and runbooks"

@@ -1,0 +1,17 @@
+message_schema:
+  inputs:
+    - name: objective
+      type: string
+    - name: constraints
+      type: list
+      items: string
+  outputs:
+    - name: milestones
+      type: list
+      items: string
+    - name: risks
+      type: list
+      items: string
+    - name: next_actions
+      type: list
+      items: string

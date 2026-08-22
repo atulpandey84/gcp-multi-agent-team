@@ -1,0 +1,11 @@
+message_schema:
+  inputs:
+    - name: component
+      type: string
+  outputs:
+    - name: test_files
+      type: list
+      items: string
+    - name: test_matrix
+      type: list
+      items: string

@@ -1,0 +1,10 @@
+message_schema:
+  inputs:
+    - name: application
+      type: string
+  outputs:
+    - name: runbook
+      type: string
+    - name: handover_checklist
+      type: list
+      items: string

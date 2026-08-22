@@ -1,0 +1,12 @@
+message_schema:
+  inputs:
+    - name: components
+      type: list
+      items: string
+  outputs:
+    - name: integration_points
+      type: list
+      items: string
+    - name: test_specs
+      type: list
+      items: string

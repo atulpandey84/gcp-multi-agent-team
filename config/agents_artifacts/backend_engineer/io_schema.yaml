@@ -1,0 +1,10 @@
+message_schema:
+  inputs:
+    - name: feature
+      type: string
+  outputs:
+    - name: openapi_fragment
+      type: string
+    - name: data_contracts
+      type: list
+      items: string

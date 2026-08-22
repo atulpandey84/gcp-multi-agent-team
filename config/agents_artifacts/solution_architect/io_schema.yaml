@@ -1,0 +1,15 @@
+message_schema:
+  inputs:
+    - name: requirements
+      type: list
+      items: string
+  outputs:
+    - name: components
+      type: list
+      items: string
+    - name: data_flows
+      type: list
+      items: string
+    - name: assumptions
+      type: list
+      items: string

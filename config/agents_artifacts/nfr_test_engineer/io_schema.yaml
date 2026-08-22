@@ -1,0 +1,11 @@
+message_schema:
+  inputs:
+    - name: target_service
+      type: string
+  outputs:
+    - name: test_profiles
+      type: list
+      items: string
+    - name: env_requirements
+      type: list
+      items: string

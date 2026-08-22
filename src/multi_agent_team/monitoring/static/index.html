@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Control Room | Multi-Agent Engineering</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div><span class="eyebrow">GCP LANDING ZONE / OPERATIONS</span><h1>Engineering control room</h1></div>
+    <div class="connection"><span id="connectionDot" class="dot"></span><span id="connectionText">Disconnected</span><button id="connect">Connect</button></div>
+  </header>
+  <main>
+    <section class="command">
+      <div><span class="eyebrow">PILOT WORKFLOW</span><h2>Provision a non-production environment</h2><p>Governed handoffs from product intent to operational readiness.</p></div>
+      <div class="launch"><input id="apiKey" type="password" placeholder="Monitoring API key" aria-label="Monitoring API key" /><input id="token" type="password" placeholder="Operator bearer token (optional)" aria-label="Operator bearer token" /><button id="launch">Launch workflow</button></div>
+    </section>
+    <section class="metrics"><div><span>RUN PROGRESS</span><strong id="runProgress">0%</strong></div><div><span>ACTIVE AGENTS</span><strong id="activeAgents">0</strong></div><div><span>MODEL POLICIES</span><strong id="modelCount">0</strong></div><div><span>GATES</span><strong>9</strong></div></section>
+    <section class="workspace">
+      <div class="panel agents-panel"><div class="panel-head"><div><span class="eyebrow">LIVE TEAM</span><h2>Agent activity</h2></div><span id="runStatus" class="badge">No active run</span></div><div id="agents" class="agent-grid"></div></div>
+      <aside class="panel timeline-panel"><div class="panel-head"><div><span class="eyebrow">TRACE</span><h2>Workflow timeline</h2></div></div><div id="timeline" class="timeline"><p class="muted">Connect to begin observing the team.</p></div></aside>
+    </section>
+    <section class="panel models-panel"><div class="panel-head"><div><span class="eyebrow">MODEL ROUTING</span><h2>Active model policies</h2></div></div><div id="models" class="model-grid"></div></section>
+  </main>
+  <script src="/static/app.js"></script>
+</body>
+</html>

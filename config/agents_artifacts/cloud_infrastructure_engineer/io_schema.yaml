@@ -1,0 +1,12 @@
+message_schema:
+  inputs:
+    - name: desired_state
+      type: string
+  outputs:
+    - name: plan_summary
+      type: string
+    - name: changes
+      type: list
+      items: string
+    - name: approval_required
+      type: boolean

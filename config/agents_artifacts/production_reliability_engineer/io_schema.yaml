@@ -1,0 +1,9 @@
+message_schema:
+  inputs:
+    - name: incident_data
+      type: string
+  outputs:
+    - name: postmortem
+      type: string
+    - name: improvement_plan
+      type: string

@@ -1,0 +1,10 @@
+message_schema:
+  inputs:
+    - name: billing_data_location
+      type: string
+  outputs:
+    - name: cost_report
+      type: string
+    - name: recommendations
+      type: list
+      items: string

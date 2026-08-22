@@ -1,0 +1,17 @@
+message_schema:
+  inputs:
+    - name: request_id
+      type: string
+      required: true
+    - name: objective
+      type: string
+      required: true
+  outputs:
+    - name: epic
+      type: string
+    - name: user_stories
+      type: list
+      items: string
+    - name: acceptance_criteria
+      type: list
+      items: string

@@ -1,0 +1,10 @@
+message_schema:
+  inputs:
+    - name: repo
+      type: string
+  outputs:
+    - name: pipeline_definition
+      type: string
+    - name: test_matrix
+      type: list
+      items: string

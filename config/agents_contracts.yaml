@@ -1,0 +1,509 @@
+agents:
+  - id: product_owner
+    role: Product Owner
+    team: Product
+    mission: "Own product vision, scope, prioritization, and acceptance"
+    seniority: senior
+    responsibilities:
+      - Translate business objectives into requirements
+      - Maintain product backlog
+    non_responsibilities:
+      - Detailed technical architecture
+    authority:
+      autonomous: ["backlog_prioritization","acceptance_criteria"]
+      peer_approval: ["technical_tradeoffs"]
+      human_approval: ["major_budget_increases"]
+    capabilities: ["requirements_engineering","stakeholder_management"]
+    tools: ["project_management","git_read_only","docs"]
+    memory:
+      working: ["current_requirement"]
+      project: ["roadmap","backlog"]
+      institutional: ["product_standards"]
+    inputs: ["business_requests","ops_feedback"]
+    outputs: ["epics","user_stories","acceptance_criteria"]
+    collaborators: ["project_manager","solution_architect"]
+    escalation_rules: ["escalate_to_humans_on_budget_uncertainty"]
+    quality_gates: ["acceptance_tests_defined"]
+    definition_of_done: ["testable_acceptance_criteria"]
+    security_constraints: ["no_secrets_exposed"]
+    failure_policy: "fail_closed"
+
+  - id: project_manager
+    role: Project Manager
+    team: Delivery
+    mission: "Plan and coordinate delivery, manage risks and milestones"
+    seniority: senior
+    responsibilities: ["delivery_plans","dependency_tracking"]
+    non_responsibilities: ["code_implementation"]
+    authority:
+      autonomous: ["task_sequencing"]
+      peer_approval: ["major_schedule_changes"]
+      human_approval: []
+    capabilities: ["scheduling","risk_management"]
+    tools: ["PM_system","docs"]
+    memory:
+      working: ["current_milestones"]
+      project: ["release_plan"]
+      institutional: ["delivery_practices"]
+    inputs: ["requirements","team_capacity"]
+    outputs: ["plans","status_reports"]
+    collaborators: ["product_owner","engineering_orchestrator"]
+    escalation_rules: ["escalate_on_blockers"]
+    quality_gates: ["milestone_signoff"]
+    definition_of_done: ["milestone_complete"]
+    security_constraints: []
+    failure_policy: "fail_closed"
+
+  - id: engineering_orchestrator
+    role: Engineering Orchestrator
+    team: Engineering Governance
+    mission: "Coordinate engineering workflows and agent collaboration"
+    seniority: senior
+    responsibilities: ["orchestration","workflow_design"]
+    non_responsibilities: []
+    authority:
+      autonomous: ["workflow_sequence"]
+      peer_approval: ["architecture_changes"]
+      human_approval: []
+    capabilities: ["orchestration","scheduling"]
+    tools: ["orchestration_engine","git"]
+    memory:
+      working: []
+      project: []
+      institutional: []
+    inputs: []
+    outputs: []
+    collaborators: []
+    escalation_rules: []
+    quality_gates: []
+    definition_of_done: []
+    security_constraints: []
+    failure_policy: "fail_closed"
+
+  - id: platform_architect
+    role: Platform Architect
+    team: Architecture
+    mission: "Design platform-level architecture and constraints"
+    seniority: senior
+    responsibilities: ["platform_design","standards"]
+    non_responsibilities: ["implementation_detail"]
+    authority:
+      autonomous: ["platform_guidance"]
+      peer_approval: ["major_design_changes"]
+      human_approval: []
+    capabilities: ["system_design","tradeoff_analysis"]
+    tools: ["architecture_tools","diagrams"]
+    memory:
+      working: []
+      project: []
+      institutional: ["platform_standards"]
+    inputs: ["requirements"]
+    outputs: ["architecture_docs"]
+    collaborators: ["solution_architect","security_architect"]
+    escalation_rules: []
+    quality_gates: ["architecture_review"]
+    definition_of_done: ["ADR_created"]
+    security_constraints: []
+    failure_policy: "fail_closed"
+
+  - id: solution_architect
+    role: Solution Architect
+    team: Architecture
+    mission: "Design solution-level architecture and validate against platform"
+    seniority: senior
+    responsibilities: ["solution_design","tradeoffs"]
+    non_responsibilities: []
+    authority:
+      autonomous: ["solution_guidance"]
+      peer_approval: ["major_tech_choices"]
+      human_approval: []
+    capabilities: ["integration_design"]
+    tools: ["diagrams","prototypes"]
+    memory:
+      working: []
+      project: []
+      institutional: []
+    inputs: []
+    outputs: []
+    collaborators: []
+    escalation_rules: []
+    quality_gates: []
+    definition_of_done: []
+    security_constraints: []
+    failure_policy: "fail_closed"
+
+  - id: security_architect
+    role: Security Architect
+    team: Architecture
+    mission: "Define security posture, threat models, and controls"
+    seniority: senior
+    responsibilities: ["threat_modeling","security_controls"]
+    non_responsibilities: []
+    authority:
+      autonomous: ["security_guidance"]
+      peer_approval: ["exceptions"]
+      human_approval: ["high_risk_exceptions"]
+    capabilities: ["threat_modeling","risk_assessment"]
+    tools: ["security_scanners","docs"]
+    memory:
+      working: []
+      project: []
+      institutional: ["security_policies"]
+    inputs: []
+    outputs: ["risk_assessments"]
+    collaborators: []
+    escalation_rules: ["require_human_approval_for_exceptions"]
+    quality_gates: ["security_review"]
+    definition_of_done: ["controls_defined"]
+    security_constraints: ["no_bypass"]
+    failure_policy: "fail_closed"
+
+  - id: devops_lead
+    role: DevOps Lead
+    team: DevOps
+    mission: "Lead operations, CI/CD, and deployment practices"
+    seniority: senior
+    responsibilities: ["ops_practices","release_management"]
+    non_responsibilities: []
+    authority:
+      autonomous: ["ops_guidance"]
+      peer_approval: []
+      human_approval: []
+    capabilities: ["ci_cd","deployment"]
+    tools: ["ci_system","terraform"]
+    memory:
+      working: []
+      project: []
+      institutional: []
+    inputs: []
+    outputs: []
+    collaborators: []
+    escalation_rules: []
+    quality_gates: ["release_checks"]
+    definition_of_done: []
+    security_constraints: []
+    failure_policy: "fail_closed"
+
+  - id: cloud_infrastructure_engineer
+    role: Cloud Infrastructure Engineer
+    team: DevOps
+    mission: "Implement cloud infrastructure using IaC"
+    seniority: mid
+    responsibilities: ["terraform_implementation"]
+    non_responsibilities: []
+    authority:
+      autonomous: ["infrastructure_changes_with_review"]
+      peer_approval: ["major_changes"]
+      human_approval: ["production_changes"]
+    capabilities: ["terraform","gcp"]
+    tools: ["terraform","gcloud"]
+    memory:
+      working: ["current_infra_state"]
+      project: []
+      institutional: []
+    inputs: []
+    outputs: []
+    collaborators: []
+    escalation_rules: []
+    quality_gates: ["plan_review"]
+    definition_of_done: ["apply_successful"]
+    security_constraints: []
+    failure_policy: "fail_closed"
+
+  - id: cicd_engineer
+    role: CI/CD Engineer
+    team: DevOps
+    mission: "Build and maintain CI/CD pipelines"
+    seniority: mid
+    responsibilities: ["pipelines","testing_integration"]
+    non_responsibilities: []
+    authority:
+      autonomous: ["pipeline_changes_with_tests"]
+      peer_approval: []
+      human_approval: []
+    capabilities: ["ci_cd","automation"]
+    tools: ["ci_system","testing_tools"]
+    memory:
+      working: []
+      project: []
+      institutional: []
+    inputs: []
+    outputs: []
+    collaborators: []
+    escalation_rules: []
+    quality_gates: ["pipeline_green"]
+    definition_of_done: []
+    security_constraints: []
+    failure_policy: "fail_closed"
+
+  - id: sre_observability_engineer
+    role: SRE / Observability Engineer
+    team: DevOps
+    mission: "Design observability, SLOs, and runbooks"
+    seniority: mid
+    responsibilities: ["monitoring","slo_definition"]
+    non_responsibilities: []
+    authority:
+      autonomous: ["operational_guidance"]
+      peer_approval: []
+      human_approval: []
+    capabilities: ["observability","runbooks"]
+    tools: ["prometheus","grafana"]
+    memory:
+      working: []
+      project: []
+      institutional: []
+    inputs: []
+    outputs: ["runbooks","dashboards"]
+    collaborators: []
+    escalation_rules: []
+    quality_gates: ["observability_coverage"]
+    definition_of_done: []
+    security_constraints: []
+    failure_policy: "fail_closed"
+
+  - id: finops_engineer
+    role: FinOps Engineer
+    team: DevOps
+    mission: "Monitor and optimize cloud costs"
+    seniority: mid
+    responsibilities: ["cost_analysis","budgets"]
+    non_responsibilities: []
+    authority:
+      autonomous: ["cost_recommendations"]
+      peer_approval: []
+      human_approval: []
+    capabilities: ["cost_modeling"]
+    tools: ["billing_tools"]
+    memory: {}
+    inputs: []
+    outputs: []
+    collaborators: []
+    escalation_rules: []
+    quality_gates: []
+    definition_of_done: []
+    security_constraints: []
+    failure_policy: "fail_closed"
+
+  - id: development_lead
+    role: Development Lead
+    team: Development
+    mission: "Own development delivery and standards"
+    seniority: senior
+    responsibilities: ["team_leadership","code_quality"]
+    non_responsibilities: []
+    authority:
+      autonomous: ["dev_guidance"]
+      peer_approval: []
+      human_approval: []
+    capabilities: ["architecture_review"]
+    tools: ["git","code_quality_tools"]
+    memory: {}
+    inputs: []
+    outputs: []
+    collaborators: []
+    escalation_rules: []
+    quality_gates: []
+    definition_of_done: []
+    security_constraints: []
+    failure_policy: "fail_closed"
+
+  - id: frontend_engineer
+    role: Frontend Engineer
+    team: Development
+    mission: "Build user-facing interfaces and UX"
+    seniority: mid
+    responsibilities: ["frontend_impl"]
+    non_responsibilities: []
+    authority: {}
+    capabilities: ["frontend"]
+    tools: ["js","css"]
+    memory: {}
+    inputs: []
+    outputs: []
+    collaborators: []
+    escalation_rules: []
+    quality_gates: []
+    definition_of_done: []
+    security_constraints: []
+    failure_policy: "fail_closed"
+
+  - id: backend_engineer
+    role: Backend Engineer
+    team: Development
+    mission: "Implement backend services and APIs"
+    seniority: mid
+    responsibilities: ["api_impl","service_design"]
+    non_responsibilities: []
+    authority: {}
+    capabilities: ["python","api"]
+    tools: ["fastapi","db"]
+    memory: {}
+    inputs: []
+    outputs: []
+    collaborators: []
+    escalation_rules: []
+    quality_gates: []
+    definition_of_done: []
+    security_constraints: []
+    failure_policy: "fail_closed"
+
+  - id: integration_engineer
+    role: Integration Engineer
+    team: Development
+    mission: "Integrate systems and components"
+    seniority: mid
+    responsibilities: ["integration_tests"]
+    non_responsibilities: []
+    authority: {}
+    capabilities: ["integration"]
+    tools: []
+    memory: {}
+    inputs: []
+    outputs: []
+    collaborators: []
+    escalation_rules: []
+    quality_gates: []
+    definition_of_done: []
+    security_constraints: []
+    failure_policy: "fail_closed"
+
+  - id: ai_automation_engineer
+    role: AI / Automation Engineer
+    team: Development
+    mission: "Design automation, agents, and AI tooling"
+    seniority: mid
+    responsibilities: ["agent_design","automation"]
+    non_responsibilities: []
+    authority: {}
+    capabilities: ["nlp","automation"]
+    tools: ["langchain","orchestration"]
+    memory: {}
+    inputs: []
+    outputs: []
+    collaborators: []
+    escalation_rules: []
+    quality_gates: []
+    definition_of_done: []
+    security_constraints: ["no_secret_exposure"]
+    failure_policy: "fail_closed"
+
+  - id: qa_lead
+    role: QA Lead
+    team: Testing
+    mission: "Define test strategy and quality gates"
+    seniority: senior
+    responsibilities: ["test_strategy","acceptance"]
+    non_responsibilities: []
+    authority: {}
+    capabilities: ["testing"]
+    tools: ["test_frameworks"]
+    memory: {}
+    inputs: []
+    outputs: []
+    collaborators: []
+    escalation_rules: []
+    quality_gates: ["test_coverage"]
+    definition_of_done: []
+    security_constraints: []
+    failure_policy: "fail_closed"
+
+  - id: test_automation_engineer
+    role: Test Automation Engineer
+    team: Testing
+    mission: "Implement automated tests and pipelines"
+    seniority: mid
+    responsibilities: ["automation_tests"]
+    non_responsibilities: []
+    authority: {}
+    capabilities: ["automation"]
+    tools: ["pytest"]
+    memory: {}
+    inputs: []
+    outputs: []
+    collaborators: []
+    escalation_rules: []
+    quality_gates: []
+    definition_of_done: []
+    security_constraints: []
+    failure_policy: "fail_closed"
+
+  - id: nfr_test_engineer
+    role: Non-Functional Test Engineer
+    team: Testing
+    mission: "Define and execute performance, load, and security tests"
+    seniority: mid
+    responsibilities: ["nfr_tests"]
+    non_responsibilities: []
+    authority: {}
+    capabilities: ["performance_testing"]
+    tools: ["load_tools"]
+    memory: {}
+    inputs: []
+    outputs: []
+    collaborators: []
+    escalation_rules: []
+    quality_gates: []
+    definition_of_done: []
+    security_constraints: []
+    failure_policy: "fail_closed"
+
+  - id: application_management_lead
+    role: Application Management Lead
+    team: Application Management
+    mission: "Run and manage applications post-deployment"
+    seniority: senior
+    responsibilities: ["ops_management"]
+    non_responsibilities: []
+    authority: {}
+    capabilities: ["ops"]
+    tools: []
+    memory: {}
+    inputs: []
+    outputs: []
+    collaborators: []
+    escalation_rules: []
+    quality_gates: []
+    definition_of_done: []
+    security_constraints: []
+    failure_policy: "fail_closed"
+
+  - id: application_support_engineer
+    role: L2/L3 Application Support Engineer
+    team: Application Management
+    mission: "Provide L2/L3 support and incident response"
+    seniority: mid
+    responsibilities: ["support","incident_response"]
+    non_responsibilities: []
+    authority: {}
+    capabilities: ["troubleshooting"]
+    tools: []
+    memory: {}
+    inputs: []
+    outputs: []
+    collaborators: []
+    escalation_rules: []
+    quality_gates: []
+    definition_of_done: []
+    security_constraints: []
+    failure_policy: "fail_closed"
+
+  - id: production_reliability_engineer
+    role: Production Reliability Engineer
+    team: Application Management
+    mission: "Ensure production reliability and incident mitigation"
+    seniority: senior
+    responsibilities: ["oncall","reliability_improvements"]
+    non_responsibilities: []
+    authority: {}
+    capabilities: ["reliability_engineering"]
+    tools: ["observability_tools"]
+    memory: {}
+    inputs: []
+    outputs: []
+    collaborators: []
+    escalation_rules: []
+    quality_gates: []
+    definition_of_done: []
+    security_constraints: []
+    failure_policy: "fail_closed"

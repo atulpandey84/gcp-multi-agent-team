@@ -1,0 +1,10 @@
+message_schema:
+  inputs:
+    - name: asset_description
+      type: string
+  outputs:
+    - name: threat_model
+      type: string
+    - name: controls
+      type: list
+      items: string

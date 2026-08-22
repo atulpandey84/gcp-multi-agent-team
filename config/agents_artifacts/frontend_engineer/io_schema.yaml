@@ -1,0 +1,10 @@
+message_schema:
+  inputs:
+    - name: ui_goal
+      type: string
+  outputs:
+    - name: html_snippet
+      type: string
+    - name: acceptance_criteria
+      type: list
+      items: string

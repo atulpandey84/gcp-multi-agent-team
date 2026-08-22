@@ -1,0 +1,19 @@
+message_schema:
+  inputs:
+    - name: objective
+      type: string
+    - name: agents
+      type: list
+      items: string
+  outputs:
+    - name: workflow_steps
+      type: list
+      items:
+        type: object
+        properties:
+          - name: task
+            type: string
+          - name: owner
+            type: string
+          - name: approval_required
+            type: boolean

@@ -1,0 +1,11 @@
+message_schema:
+  inputs:
+    - name: incident
+      type: string
+  outputs:
+    - name: triage_steps
+      type: list
+      items: string
+    - name: remediation
+      type: list
+      items: string

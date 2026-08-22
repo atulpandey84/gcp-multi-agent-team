@@ -1,0 +1,20 @@
+models:
+  architecture_critical: &id001
+    max_tokens: 8192
+    model: nvidia/nemotron-3-ultra-550b-a55b
+    provider: nvidia
+    temperature: 0.1
+  coding: *id001
+  embedding: *id001
+  fast_agent:
+    max_tokens: 4096
+    model: nvidia/nemotron-3.5-lightning-30b-a3b
+    provider: nvidia
+    temperature: 0.1
+  fast_coding: *id001
+  reranker: *id001
+  senior_reasoning:
+    max_tokens: 8192
+    model: nvidia/nemotron-3-super-120b-a12b
+    provider: nvidia
+    temperature: 0.1

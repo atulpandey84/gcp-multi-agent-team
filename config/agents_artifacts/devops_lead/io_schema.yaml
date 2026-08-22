@@ -1,0 +1,10 @@
+message_schema:
+  inputs:
+    - name: release_version
+      type: string
+  outputs:
+    - name: release_checks
+      type: list
+      items: string
+    - name: runbook
+      type: string

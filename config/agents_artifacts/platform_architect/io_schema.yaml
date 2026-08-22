@@ -1,0 +1,10 @@
+message_schema:
+  inputs:
+    - name: requirement
+      type: string
+  outputs:
+    - name: adr
+      type: string
+    - name: consequences
+      type: list
+      items: string

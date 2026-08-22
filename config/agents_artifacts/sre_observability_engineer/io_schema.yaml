@@ -1,0 +1,10 @@
+message_schema:
+  inputs:
+    - name: service
+      type: string
+  outputs:
+    - name: slos
+      type: list
+      items: string
+    - name: runbook
+      type: string

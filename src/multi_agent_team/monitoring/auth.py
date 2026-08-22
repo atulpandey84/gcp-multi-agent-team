@@ -1,0 +1,50 @@
+import os
+import time
+import json
+import hmac
+import hashlib
+import base64
+from typing import Dict as _dict
+
+
+def _b64url(data: bytes) -> str:
+    return base64.urlsafe_b64encode(data).rstrip(b"=").decode()
+
+
+def _b64url_decode(s: str) -> bytes:
+    padding = '=' * (-len(s) % 4)
+    return base64.urlsafe_b64decode(s + padding)
+
+
+def create_jwt(claims: dict, exp_seconds: int = 3600) -> str:
+    secret = os.getenv('MONITORING_JWT_SECRET')
+    if not secret:
+        raise RuntimeError('MONITORING_JWT_SECRET not set')
+    header = _b64url(json.dumps({"alg": "HS256", "typ": "JWT"}).encode())
+    payload = dict(claims)
+    payload.setdefault('iat', int(time.time()))
+    payload.setdefault('exp', int(time.time()) + exp_seconds)
+    payload_s = _b64url(json.dumps(payload).encode())
+    signing_input = f"{header}.{payload_s}".encode()
+    sig = hmac.new(secret.encode(), signing_input, hashlib.sha256).digest()
+    return f"{header}.{payload_s}.{_b64url(sig)}"
+
+
+def verify_jwt(token: str) -> dict:
+    secret = os.getenv('MONITORING_JWT_SECRET')
+    if not secret:
+        raise RuntimeError('MONITORING_JWT_SECRET not set')
+    try:
+        header_b64, payload_b64, sig_b64 = token.split('.')
+    except Exception:
+        raise ValueError('invalid token')
+    signing_input = f"{header_b64}.{payload_b64}".encode()
+    expected = hmac.new(secret.encode(), signing_input, hashlib.sha256).digest()
+    sig = _b64url_decode(sig_b64)
+    if not hmac.compare_digest(expected, sig):
+        raise ValueError('invalid signature')
+    payload = json.loads(_b64url_decode(payload_b64))
+    now = int(time.time())
+    if 'exp' in payload and now >= int(payload['exp']):
+        raise ValueError('token expired')
+    return payload

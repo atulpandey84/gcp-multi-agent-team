@@ -1,0 +1,10 @@
+message_schema:
+  inputs:
+    - name: feature_list
+      type: list
+      items: string
+  outputs:
+    - name: test_plan
+      type: string
+    - name: acceptance_matrix
+      type: string

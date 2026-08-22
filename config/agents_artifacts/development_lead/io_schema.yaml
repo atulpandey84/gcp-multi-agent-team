@@ -1,0 +1,11 @@
+message_schema:
+  inputs:
+    - name: repo
+      type: string
+  outputs:
+    - name: standards
+      type: list
+      items: string
+    - name: review_checklist
+      type: list
+      items: string
