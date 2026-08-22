@@ -10,27 +10,25 @@
 </head>
 <body>
   <header class="topbar">
-    <div><span class="eyebrow">GCP LANDING ZONE / OPERATIONS</span><h1>Engineering control room</h1></div>
-    <div class="connection"><span id="connectionDot" class="dot"></span><span id="connectionText">Disconnected</span><button id="connect">Connect</button></div>
+    <div>
+      <span class="eyebrow">GCP LANDING ZONE / OPERATIONS</span>
+      <h1>Engineering control room</h1>
+    </div>
+    <div class="connection">
+      <input id="apiKey" type="password" placeholder="Monitoring API key / bearer token" aria-label="Monitoring API key" />
+      <span id="connectionDot" class="dot"></span>
+      <span id="connectionText">Disconnected</span>
+      <button id="connectBtn">Connect</button>
+    </div>
   </header>
   <main>
     <!-- Executive Chat & Business Partner Handoff -->
-    <section class="command executive-chat">
-      <div>
-        <span class="eyebrow">EXECUTIVE CHAT & BUSINESS PARTNER HANDOFF</span>
-        <h2>Multi-Agent Engineering Organization</h2>
-        <p>Pass high-level business requirements directly to the Product Owner & Project Manager.</p>
-      </div>
-      <div class="launch">
-        <input id="apiKey" type="password" placeholder="Monitoring API key" aria-label="Monitoring API key" />
-        <input id="token" type="password" placeholder="Operator bearer token (optional)" aria-label="Operator bearer token" />
-        <button id="connectBtn">Connect</button>
-      </div>
-    </section>
-
     <section class="panel chat-panel">
       <div class="panel-head">
-        <div><span class="eyebrow">BUSINESS PARTNER INTERFACE</span><h2>Executive Requirement Chat</h2></div>
+        <div>
+          <span class="eyebrow">EXECUTIVE CHAT & BUSINESS PARTNER HANDOFF</span>
+          <h2>Executive Requirement Chat</h2>
+        </div>
         <div class="chat-actions">
           <span class="badge live-badge">INTERACTIVE DIALOGUE</span>
           <button id="approveExecutionBtn" class="btn-approve">Approve & Initiate Engineering Execution</button>
@@ -48,12 +46,13 @@
       </div>
     </section>
 
-    <!-- Workflow Stage Flow Diagram -->
+    <!-- Workflow Stage Waterfall Execution Diagram -->
     <section class="panel flow-panel">
       <div class="panel-head">
-        <div><span class="eyebrow">GOVERNED STAGE FLOW</span><h2>Workflow Execution DAG Diagram</h2></div>
+        <div><span class="eyebrow">GOVERNED WATERFALL EXECUTION</span><h2>Workflow Execution Waterfall Diagram</h2></div>
       </div>
       <div id="workflowFlowDiagram" class="flow-diagram"></div>
+      <div id="waterfallContainer" class="waterfall-container"></div>
     </section>
 
     <!-- Artifacts & Evidence Panel -->
@@ -75,7 +74,7 @@
     <section class="workspace">
       <div class="panel agents-panel">
         <div class="panel-head">
-          <div><span class="eyebrow">MULTI-AGENT ORGANIZATION</span><h2>Team & Agent Activity (22 Autonomous Specialists)</h2></div>
+          <div><span class="eyebrow">MULTI-AGENT ORGANIZATION</span><h2>Team & Agent Activity (22 Autonomous Specialists - Click to Drill Down)</h2></div>
           <span id="runStatus" class="badge">No active run</span>
         </div>
         <div id="teamsContainer" class="teams-container"></div>
@@ -93,6 +92,26 @@
       <div class="panel-head"><div><span class="eyebrow">MULTI-MODEL ROUTING</span><h2>Active Persona Model Policies</h2></div></div>
       <div id="models" class="model-grid"></div>
     </section>
+
+    <!-- Agent Detail Drill-Down Modal -->
+    <div id="agentDetailModal" class="modal-backdrop hidden">
+      <div class="modal-card">
+        <div class="modal-head">
+          <div>
+            <span id="modalAgentRole" class="modal-title">Agent Detail</span>
+            <span id="modalAgentTeam" class="badge">Team</span>
+          </div>
+          <button id="closeModalBtn" class="close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="detail-row"><span class="label">Mission:</span><p id="modalAgentMission" class="val"></p></div>
+          <div class="detail-row"><span class="label">Assigned Model Policy:</span><span id="modalModelPolicy" class="badge model-badge"></span></div>
+          <div class="detail-row"><span class="label">Status:</span><span id="modalAgentStatus" class="status"></span></div>
+          <div class="detail-row"><span class="label">Live Thinking & Execution Trace:</span><div id="modalThinkingTrace" class="trace-box"></div></div>
+          <div class="detail-row"><span class="label">Output Artifact:</span><div id="modalOutputArtifact" class="artifact-box"></div></div>
+        </div>
+      </div>
+    </div>
   </main>
   <script src="/static/app.js"></script>
 </body>

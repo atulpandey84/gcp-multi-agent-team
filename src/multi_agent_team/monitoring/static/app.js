@@ -8,9 +8,13 @@ const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&
 function headers() {
   const h = {};
   const key = document.getElementById('apiKey').value;
-  const token = document.getElementById('token').value;
-  if (token) h.Authorization = `Bearer ${token}`;
-  if (key) h['x-api-key'] = key;
+  if (key) {
+    if (key.startsWith('ey') || key.length > 50) {
+      h.Authorization = `Bearer ${key}`;
+    } else {
+      h['x-api-key'] = key;
+    }
+  }
   return h;
 }
 
@@ -18,6 +22,47 @@ async function api(path, options = {}) {
   const response = await fetch(path, { ...options, headers: { ...headers(), ...(options.headers || {}) } });
   if (!response.ok) throw new Error(`${response.status}`);
   return response.json();
+}
+
+function openAgentModal(agentId) {
+  const agent = agents.find(a => a.id === agentId) || { id: agentId, role: agentId, team: 'Agent', mission: 'Autonomous Specialist' };
+  const task = (currentRun?.tasks || []).find(t => t.agent_id === agentId);
+
+  document.getElementById('modalAgentRole').textContent = agent.role;
+  document.getElementById('modalAgentTeam').textContent = `${agent.team || 'Engineering'} Team`;
+  document.getElementById('modalAgentMission').textContent = task?.title || agent.mission;
+  document.getElementById('modalModelPolicy').textContent = task?.model_policy || agent.model_policy || 'senior_reasoning';
+
+  const status = task?.status === 'running' ? 'working' : (task?.status || agent.status || 'idle');
+  const statusEl = document.getElementById('modalAgentStatus');
+  statusEl.textContent = status.toUpperCase();
+  statusEl.className = `status ${status}`;
+
+  const traceBox = document.getElementById('modalThinkingTrace');
+  if (task) {
+    traceBox.innerHTML = `
+      <div class="trace-item"><b>[Agent Persona]</b> ${escapeHtml(agent.role)} (${escapeHtml(agent.team)})</div>
+      <div class="trace-item"><b>[Model Policy]</b> Using ${escapeHtml(task.model_policy)} model tier for reasoning</div>
+      <div class="trace-item"><b>[Task Objective]</b> ${escapeHtml(task.title)}</div>
+      <div class="trace-item"><b>[Reasoning Status]</b> ${task.status === 'completed' ? '✓ Reasoning & output generation complete (100%)' : '⚙ Active reasoning & decomposition in progress...'}</div>
+      ${task.output_summary ? `<div class="trace-item summary"><b>[Summary]</b> ${escapeHtml(task.output_summary)}</div>` : ''}
+    `;
+  } else {
+    traceBox.innerHTML = `<p class="muted">Agent ${escapeHtml(agent.role)} is standing by in active readiness state.</p>`;
+  }
+
+  const artifactBox = document.getElementById('modalOutputArtifact');
+  if (task?.output_artifact) {
+    artifactBox.innerHTML = `<code>${escapeHtml(task.output_artifact)}</code>`;
+  } else {
+    artifactBox.innerHTML = '<span class="muted">No output artifact generated for this step yet.</span>';
+  }
+
+  document.getElementById('agentDetailModal').classList.remove('hidden');
+}
+
+function closeAgentModal() {
+  document.getElementById('agentDetailModal').classList.add('hidden');
 }
 
 function renderFlowDiagram() {
@@ -43,7 +88,7 @@ function renderFlowDiagram() {
     const statusClass = isCompleted ? 'completed' : (isRunning ? 'running' : (progress > 0 && idx === 0 ? 'completed' : 'pending'));
 
     return `
-      <div class="flow-node ${statusClass}">
+      <div class="flow-node ${statusClass}" onclick="openAgentModal('${stage.agents[0]}')">
         <div class="flow-step-num">Stage ${idx + 1}</div>
         <div class="flow-node-title">${escapeHtml(stage.name)}</div>
         <div class="flow-node-desc">${escapeHtml(stage.desc)}</div>
@@ -54,6 +99,38 @@ function renderFlowDiagram() {
   }).join('');
 
   flowContainer.innerHTML = html;
+}
+
+function renderWaterfall() {
+  const waterfallEl = document.getElementById('waterfallContainer');
+  if (!waterfallEl) return;
+  const tasks = currentRun?.tasks || [];
+
+  if (tasks.length === 0) {
+    waterfallEl.innerHTML = '<p class="muted">Launch or approve execution to display the waterfall timeline graph.</p>';
+    return;
+  }
+
+  const html = tasks.map((task, idx) => {
+    const statusClass = task.status === 'completed' ? 'completed' : (task.status === 'running' ? 'running' : 'pending');
+    const agent = agents.find(a => a.id === task.agent_id) || { role: task.agent_id };
+
+    return `
+      <div class="waterfall-row" onclick="openAgentModal('${task.agent_id}')">
+        <div class="waterfall-agent">
+          <span class="avatar">${escapeHtml(agent.role.slice(0, 2).toUpperCase())}</span>
+          <b>${escapeHtml(agent.role)}</b>
+        </div>
+        <div class="waterfall-track">
+          <div class="waterfall-bar ${statusClass}" style="left: ${(idx / tasks.length) * 80}%; width: ${Math.max(task.progress, 15)}%;">
+            <span class="waterfall-text">${escapeHtml(task.title)} (${task.progress}%)</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  waterfallEl.innerHTML = html;
 }
 
 function renderArtifacts() {
@@ -89,7 +166,7 @@ function renderAgents() {
     const cardsHtml = teamAgents.map(agent => {
       const task = taskMap[agent.id];
       const status = task?.status === 'running' ? 'working' : (task?.status || agent.status || 'idle');
-      return `<article class="agent-card ${status}">
+      return `<article class="agent-card ${status}" onclick="openAgentModal('${agent.id}')">
         <div class="agent-top">
           <span class="avatar">${escapeHtml(agent.role?.slice(0, 2).toUpperCase())}</span>
           <span class="status ${status}">${status}</span>
@@ -103,7 +180,7 @@ function renderAgents() {
           </div>
           <div class="bar"><i style="width:${task.progress}%"></i></div>
           ${task.output_summary ? `<div class="output-snippet">✓ ${escapeHtml(task.output_summary)}</div>` : ''}
-        ` : '<div class="idle-line">Standing by</div>'}
+        ` : '<div class="idle-line">Standing by - Click to drill down</div>'}
       </article>`;
     }).join('');
 
@@ -135,7 +212,7 @@ function renderCollaboration() {
 
   feedEl.innerHTML = collabEvents.map(e => {
     const d = e.details || {};
-    return `<div class="collab-card">
+    return `<div class="collab-card" onclick="openAgentModal('${d.sender}')">
       <div class="collab-header">
         <span class="sender">${escapeHtml(d.sender)} (${escapeHtml(d.sender_team)})</span>
         <span class="arrow">➔</span>
@@ -154,6 +231,7 @@ function renderRun() {
   renderAgents();
   renderCollaboration();
   renderFlowDiagram();
+  renderWaterfall();
   renderArtifacts();
 }
 
@@ -184,8 +262,7 @@ async function loadData() {
 
 function connect() {
   const key = document.getElementById('apiKey').value;
-  const token = document.getElementById('token').value;
-  const query = token ? `?token=${encodeURIComponent(token)}` : (key ? `?api_key=${encodeURIComponent(key)}` : '');
+  const query = key ? (key.startsWith('ey') || key.length > 50 ? `?token=${encodeURIComponent(key)}` : `?api_key=${encodeURIComponent(key)}`) : '';
   if (ws) ws.close();
   ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws/agents${query}`);
   ws.onopen = () => {
@@ -215,14 +292,12 @@ async function handleChatInput() {
 
   pendingRequirement = reqText;
 
-  // Render user message
   const userMsg = document.createElement('div');
   userMsg.className = 'chat-msg user';
   userMsg.innerHTML = `<div class="chat-role">EXECUTIVE BUSINESS PARTNER</div><div class="chat-text">${escapeHtml(reqText)}</div>`;
   chatHistory.appendChild(userMsg);
   inputEl.value = '';
 
-  // Interactive Assistant response clarifying requirement
   setTimeout(() => {
     const assistantMsg = document.createElement('div');
     assistantMsg.className = 'chat-msg ack';
@@ -263,11 +338,11 @@ async function approveAndInitiateExecution() {
   }
 }
 
-document.getElementById('connect').addEventListener('click', connect);
 const connBtn = document.getElementById('connectBtn');
 if (connBtn) connBtn.addEventListener('click', connect);
 document.getElementById('sendChatBtn').addEventListener('click', handleChatInput);
 document.getElementById('approveExecutionBtn').addEventListener('click', approveAndInitiateExecution);
+document.getElementById('closeModalBtn').addEventListener('click', closeAgentModal);
 document.getElementById('chatInput').addEventListener('keydown', e => {
   if (e.key === 'Enter') handleChatInput();
 });

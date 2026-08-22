@@ -4,7 +4,14 @@ import json
 import hmac
 import hashlib
 import base64
+import secrets
 from typing import Dict as _dict
+
+_AUTO_SECRET = os.getenv('MONITORING_JWT_SECRET') or secrets.token_hex(32)
+
+
+def _get_secret() -> str:
+    return os.getenv('MONITORING_JWT_SECRET') or _AUTO_SECRET
 
 
 def _b64url(data: bytes) -> str:
@@ -17,9 +24,7 @@ def _b64url_decode(s: str) -> bytes:
 
 
 def create_jwt(claims: dict, exp_seconds: int = 3600) -> str:
-    secret = os.getenv('MONITORING_JWT_SECRET')
-    if not secret:
-        raise RuntimeError('MONITORING_JWT_SECRET not set')
+    secret = _get_secret()
     header = _b64url(json.dumps({"alg": "HS256", "typ": "JWT"}).encode())
     payload = dict(claims)
     payload.setdefault('iat', int(time.time()))
@@ -31,9 +36,7 @@ def create_jwt(claims: dict, exp_seconds: int = 3600) -> str:
 
 
 def verify_jwt(token: str) -> dict:
-    secret = os.getenv('MONITORING_JWT_SECRET')
-    if not secret:
-        raise RuntimeError('MONITORING_JWT_SECRET not set')
+    secret = _get_secret()
     try:
         header_b64, payload_b64, sig_b64 = token.split('.')
     except Exception:
