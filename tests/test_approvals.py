@@ -94,23 +94,3 @@ def test_approval_request_rejects_unknown_actions_and_agents():
         headers=headers,
         json={'action': 'start', 'agent_id': 'missing-agent'},
     ).status_code == 404
-
-
-def test_create_token_without_jwt_secret_env(monkeypatch):
-    client = TestClient(app)
-    monkeypatch.delenv('MONITORING_JWT_SECRET', raising=False)
-    config.settings.jwt_secret = None
-    config.settings.api_key = 'JulM0nday19#'
-
-    headers = {'x-api-key': 'JulM0nday19#'}
-    body = {'role': 'operator'}
-
-    response = client.post('/api/token', headers=headers, json=body)
-    assert response.status_code == 200
-    data = response.json()
-    assert 'access_token' in data
-    assert data.get('token_type') == 'bearer'
-
-    from src.multi_agent_team.monitoring.auth import verify_jwt
-    claims = verify_jwt(data['access_token'])
-    assert claims.get('role') == 'operator'

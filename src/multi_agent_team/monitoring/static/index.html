@@ -32,6 +32,7 @@
         <div class="chat-actions">
           <span class="badge live-badge">INTERACTIVE DIALOGUE</span>
           <button id="approveExecutionBtn" class="btn-approve">Approve & Initiate Engineering Execution</button>
+          <button id="stopResetBtn" class="btn-stop">Stop Tasks & Reset</button>
         </div>
       </div>
       <div id="chatHistory" class="chat-history">
@@ -81,9 +82,10 @@
       </div>
       <aside class="panel timeline-panel">
         <div class="panel-head">
-          <div><span class="eyebrow">COLLABORATION & TRACE</span><h2>Inter-Agent Handoffs & Timeline</h2></div>
+          <div><span class="eyebrow">COLLABORATION & TRACE</span><h2>Inter-Agent Handoffs & Live Logs</h2></div>
         </div>
         <div id="collaborationFeed" class="collaboration-feed"></div>
+        <div id="logConsole" class="log-console"><p class="muted">Connect to stream execution logs.</p></div>
         <div id="timeline" class="timeline"><p class="muted">Connect to begin observing the team.</p></div>
       </aside>
     </section>
