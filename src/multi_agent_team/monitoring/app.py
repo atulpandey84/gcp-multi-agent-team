@@ -316,7 +316,7 @@ def create_token(payload: dict, request: Request):
     key = settings.api_key or os.getenv('MONITORING_API_KEY')
     if key and x_api_key != key:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
-    role = payload.get('role')
+    role = payload.get('role') if isinstance(payload, dict) else None
     if not role:
         raise HTTPException(status_code=400, detail='role required')
     # allowed roles
