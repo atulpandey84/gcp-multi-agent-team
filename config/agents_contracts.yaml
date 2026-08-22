@@ -275,7 +275,10 @@ agents:
       human_approval: []
     capabilities: ["cost_modeling"]
     tools: ["billing_tools"]
-    memory: {}
+    memory:
+      working: []
+      project: []
+      institutional: []
     inputs: []
     outputs: []
     collaborators: []
@@ -298,7 +301,10 @@ agents:
       human_approval: []
     capabilities: ["architecture_review"]
     tools: ["git","code_quality_tools"]
-    memory: {}
+    memory:
+      working: []
+      project: []
+      institutional: []
     inputs: []
     outputs: []
     collaborators: []
@@ -315,10 +321,16 @@ agents:
     seniority: mid
     responsibilities: ["frontend_impl"]
     non_responsibilities: []
-    authority: {}
+    authority:
+      autonomous: []
+      peer_approval: []
+      human_approval: []
     capabilities: ["frontend"]
     tools: ["js","css"]
-    memory: {}
+    memory:
+      working: []
+      project: []
+      institutional: []
     inputs: []
     outputs: []
     collaborators: []
@@ -335,10 +347,16 @@ agents:
     seniority: mid
     responsibilities: ["api_impl","service_design"]
     non_responsibilities: []
-    authority: {}
+    authority:
+      autonomous: []
+      peer_approval: []
+      human_approval: []
     capabilities: ["python","api"]
     tools: ["fastapi","db"]
-    memory: {}
+    memory:
+      working: []
+      project: []
+      institutional: []
     inputs: []
     outputs: []
     collaborators: []
@@ -355,10 +373,16 @@ agents:
     seniority: mid
     responsibilities: ["integration_tests"]
     non_responsibilities: []
-    authority: {}
+    authority:
+      autonomous: []
+      peer_approval: []
+      human_approval: []
     capabilities: ["integration"]
     tools: []
-    memory: {}
+    memory:
+      working: []
+      project: []
+      institutional: []
     inputs: []
     outputs: []
     collaborators: []
@@ -375,10 +399,16 @@ agents:
     seniority: mid
     responsibilities: ["agent_design","automation"]
     non_responsibilities: []
-    authority: {}
+    authority:
+      autonomous: []
+      peer_approval: []
+      human_approval: []
     capabilities: ["nlp","automation"]
     tools: ["langchain","orchestration"]
-    memory: {}
+    memory:
+      working: []
+      project: []
+      institutional: []
     inputs: []
     outputs: []
     collaborators: []
@@ -395,10 +425,16 @@ agents:
     seniority: senior
     responsibilities: ["test_strategy","acceptance"]
     non_responsibilities: []
-    authority: {}
+    authority:
+      autonomous: []
+      peer_approval: []
+      human_approval: []
     capabilities: ["testing"]
     tools: ["test_frameworks"]
-    memory: {}
+    memory:
+      working: []
+      project: []
+      institutional: []
     inputs: []
     outputs: []
     collaborators: []
@@ -415,10 +451,16 @@ agents:
     seniority: mid
     responsibilities: ["automation_tests"]
     non_responsibilities: []
-    authority: {}
+    authority:
+      autonomous: []
+      peer_approval: []
+      human_approval: []
     capabilities: ["automation"]
     tools: ["pytest"]
-    memory: {}
+    memory:
+      working: []
+      project: []
+      institutional: []
     inputs: []
     outputs: []
     collaborators: []
@@ -435,10 +477,16 @@ agents:
     seniority: mid
     responsibilities: ["nfr_tests"]
     non_responsibilities: []
-    authority: {}
+    authority:
+      autonomous: []
+      peer_approval: []
+      human_approval: []
     capabilities: ["performance_testing"]
     tools: ["load_tools"]
-    memory: {}
+    memory:
+      working: []
+      project: []
+      institutional: []
     inputs: []
     outputs: []
     collaborators: []
@@ -455,10 +503,16 @@ agents:
     seniority: senior
     responsibilities: ["ops_management"]
     non_responsibilities: []
-    authority: {}
+    authority:
+      autonomous: []
+      peer_approval: []
+      human_approval: []
     capabilities: ["ops"]
     tools: []
-    memory: {}
+    memory:
+      working: []
+      project: []
+      institutional: []
     inputs: []
     outputs: []
     collaborators: []
@@ -475,10 +529,16 @@ agents:
     seniority: mid
     responsibilities: ["support","incident_response"]
     non_responsibilities: []
-    authority: {}
+    authority:
+      autonomous: []
+      peer_approval: []
+      human_approval: []
     capabilities: ["troubleshooting"]
     tools: []
-    memory: {}
+    memory:
+      working: []
+      project: []
+      institutional: []
     inputs: []
     outputs: []
     collaborators: []
@@ -495,10 +555,16 @@ agents:
     seniority: senior
     responsibilities: ["oncall","reliability_improvements"]
     non_responsibilities: []
-    authority: {}
+    authority:
+      autonomous: []
+      peer_approval: []
+      human_approval: []
     capabilities: ["reliability_engineering"]
     tools: ["observability_tools"]
-    memory: {}
+    memory:
+      working: []
+      project: []
+      institutional: []
     inputs: []
     outputs: []
     collaborators: []
