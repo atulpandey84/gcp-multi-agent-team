@@ -4,6 +4,7 @@ import json
 import hmac
 import hashlib
 import base64
+import secrets
 from typing import Dict as _dict
 from .config import settings
 
@@ -16,6 +17,12 @@ def _get_jwt_secret() -> str:
         or os.getenv('MONITORING_API_KEY')
         or 'dev-secret-key'
     )
+
+_AUTO_SECRET = os.getenv('MONITORING_JWT_SECRET') or secrets.token_hex(32)
+
+
+def _get_secret() -> str:
+    return os.getenv('MONITORING_JWT_SECRET') or _AUTO_SECRET
 
 
 def _b64url(data: bytes) -> str:
