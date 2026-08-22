@@ -57,7 +57,14 @@ function openAgentModal(agentId) {
       <div class="trace-item"><b>[Agent Persona]</b> ${escapeHtml(agent.role)} (${escapeHtml(agent.team)})</div>
       <div class="trace-item"><b>[Model Policy]</b> Using ${escapeHtml(task.model_policy)} model tier for reasoning</div>
       <div class="trace-item"><b>[Task Objective]</b> ${escapeHtml(task.title)}</div>
-      <div class="trace-item"><b>[Reasoning Status]</b> ${task.status === 'completed' ? '✓ Reasoning & output generation complete (100%)' : '⚙ Active reasoning & decomposition in progress...'}</div>
+      <div class="trace-item"><b>[Reasoning Status]</b> ${task.status === 'completed' ? '✓ Reasoning & output generation complete (100%)' : (task.status === 'failed' ? '❌ Task execution failed' : '⚙ Active reasoning & decomposition in progress...')}</div>
+      ${task.failure_reason ? `
+        <div class="failure-callout">
+          <div class="fail-title">⚠️ Task Failure Reason</div>
+          <div class="fail-reason">${escapeHtml(task.failure_reason)}</div>
+          <div class="fail-resolution"><b>Suggested Resolution:</b> ${escapeHtml(task.suggested_resolution || 'Review configuration and retry.')}</div>
+        </div>
+      ` : ''}
       ${task.output_summary ? `<div class="trace-item summary"><b>[Summary]</b> ${escapeHtml(task.output_summary)}</div>` : ''}
     `;
   } else {
@@ -96,9 +103,10 @@ function renderFlowDiagram() {
 
   const html = stages.map((stage, idx) => {
     const stageTasks = stage.agents.map(aid => tasksMap[aid]).filter(Boolean);
+    const hasFailed = stageTasks.some(t => t.status === 'failed');
     const isCompleted = stageTasks.length > 0 && stageTasks.every(t => t.status === 'completed');
     const isRunning = stageTasks.some(t => t.status === 'running');
-    const statusClass = isCompleted ? 'completed' : (isRunning ? 'running' : (progress > 0 && idx === 0 ? 'completed' : 'pending'));
+    const statusClass = hasFailed ? 'failed' : (isCompleted ? 'completed' : (isRunning ? 'running' : (progress > 0 && idx === 0 ? 'completed' : 'pending')));
 
     return `
       <div class="flow-node ${statusClass}" onclick="openAgentModal('${stage.agents[0]}')">
@@ -125,7 +133,7 @@ function renderWaterfall() {
   }
 
   const html = tasks.map((task, idx) => {
-    const statusClass = task.status === 'completed' ? 'completed' : (task.status === 'running' ? 'running' : 'pending');
+    const statusClass = task.status === 'completed' ? 'completed' : (task.status === 'failed' ? 'failed' : (task.status === 'running' ? 'running' : 'pending'));
     const agent = agents.find(a => a.id === task.agent_id) || { role: task.agent_id };
 
     return `
@@ -136,7 +144,7 @@ function renderWaterfall() {
         </div>
         <div class="waterfall-track">
           <div class="waterfall-bar ${statusClass}" style="left: ${(idx / tasks.length) * 80}%; width: ${Math.max(task.progress, 15)}%;">
-            <span class="waterfall-text">${escapeHtml(task.title)} (${task.progress}%)</span>
+            <span class="waterfall-text">${escapeHtml(task.title)} ${task.status === 'failed' ? '❌ FAILED' : `(${task.progress}%)`}</span>
           </div>
         </div>
       </div>
@@ -334,18 +342,32 @@ async function handleChatInput() {
   const reqText = (inputEl.value || '').trim();
   if (!reqText) return;
 
-  pendingRequirement = reqText;
-
   const userMsg = document.createElement('div');
   userMsg.className = 'chat-msg user';
   userMsg.innerHTML = `<div class="chat-role">EXECUTIVE BUSINESS PARTNER</div><div class="chat-text">${escapeHtml(reqText)}</div>`;
   chatHistory.appendChild(userMsg);
   inputEl.value = '';
 
+  const lowerReq = reqText.toLowerCase();
+
   setTimeout(() => {
     const assistantMsg = document.createElement('div');
     assistantMsg.className = 'chat-msg ack';
-    assistantMsg.innerHTML = `<div class="chat-role">Product Owner & Project Manager</div><div class="chat-text">Requirement understood: <i>"${escapeHtml(reqText)}"</i>. I have aligned with Solution Architect (DeepSeek Pro) & Security Architect to ensure complete Landing Zone hardening, Zero Trust IAM, and automated governance. Click <b>Approve & Initiate Engineering Execution</b> to proceed.</div>`;
+
+    if ((lowerReq.includes('gcp') && lowerReq.includes('azure')) || lowerReq.includes(' or azure') || lowerReq.includes('or gcp')) {
+      assistantMsg.innerHTML = `<div class="chat-role">Product Owner & Project Manager</div><div class="chat-text">⚠️ <b>Clarification Needed:</b> You mentioned both GCP Landing Zone and Azure Landing Zone ("<i>${escapeHtml(reqText)}</i>"). Both cloud environments cannot be constructed in a single unified pipeline run. <br/><br/>Please clarify: <b>Would you like to build a GCP Landing Zone or an Azure Landing Zone?</b></div>`;
+      pendingRequirement = null;
+    } else if (lowerReq.includes('gcp') || lowerReq.includes('google')) {
+      pendingRequirement = "Build an architecturally secure, hardened GCP Landing Zone with Zero Trust IAM, Organization Policies, and VPC Service Controls";
+      assistantMsg.innerHTML = `<div class="chat-role">Product Owner & Project Manager</div><div class="chat-text">Requirement confirmed: <b>GCP Landing Zone</b>. I have aligned with Solution Architect & Security Architect for Zero Trust IAM, VPC Service Controls, and Terraform IaC pipeline generation. Click <b>Approve & Initiate Engineering Execution</b> to proceed.</div>`;
+    } else if (lowerReq.includes('azure') || lowerReq.includes('microsoft')) {
+      pendingRequirement = "Build an architecturally secure, hardened Azure Landing Zone with Management Groups, Azure Policy, and Zero Trust IAM";
+      assistantMsg.innerHTML = `<div class="chat-role">Product Owner & Project Manager</div><div class="chat-text">Requirement confirmed: <b>Azure Landing Zone</b>. I have aligned with Solution Architect & Security Architect for Management Group hierarchy, Azure Policy safeguards, and Terraform IaC pipeline generation. Click <b>Approve & Initiate Engineering Execution</b> to proceed.</div>`;
+    } else {
+      pendingRequirement = reqText;
+      assistantMsg.innerHTML = `<div class="chat-role">Product Owner & Project Manager</div><div class="chat-text">Requirement understood: <i>"${escapeHtml(reqText)}"</i>. I have aligned with Solution Architect & Security Architect to ensure complete Landing Zone hardening and automated governance. Click <b>Approve & Initiate Engineering Execution</b> to proceed.</div>`;
+    }
+
     chatHistory.appendChild(assistantMsg);
     chatHistory.scrollTop = chatHistory.scrollHeight;
   }, 400);

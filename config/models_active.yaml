@@ -1,7 +1,7 @@
 models:
   architecture_critical:
     provider: nvidia
-    model: deepseek-ai/deepseek-v4-pro
+    model: nvidia/nemotron-3-ultra-550b-a55b
     temperature: 0.1
     max_tokens: 8192
   coding:
@@ -11,22 +11,22 @@ models:
     max_tokens: 8192
   senior_reasoning:
     provider: nvidia
-    model: nvidia/nemotron-3-super-120b-a12b
+    model: nvidia/nemotron-3-ultra-550b-a55b
     temperature: 0.1
     max_tokens: 8192
   fast_coding:
     provider: nvidia
-    model: deepseek-ai/deepseek-v4-flash
+    model: nvidia/nemotron-3-ultra-550b-a55b
     temperature: 0.1
     max_tokens: 4096
   fast_agent:
     provider: nvidia
-    model: nvidia/nemotron-3.5-lightning-30b-a3b
+    model: nvidia/nemotron-3-ultra-550b-a55b
     temperature: 0.1
     max_tokens: 4096
   embedding:
     provider: nvidia
-    model: nvidia/nemotron-3-embed-1b
+    model: nvidia/nemotron-3-ultra-550b-a55b
   reranker:
     provider: nvidia
-    model: nvidia/llama-nemotron-rerank-1b-v2
+    model: nvidia/nemotron-3-ultra-550b-a55b
