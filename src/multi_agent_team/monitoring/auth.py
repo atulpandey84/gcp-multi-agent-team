@@ -6,6 +6,17 @@ import hashlib
 import base64
 import secrets
 from typing import Dict as _dict
+from .config import settings
+
+
+def _get_jwt_secret() -> str:
+    return (
+        settings.jwt_secret
+        or os.getenv('MONITORING_JWT_SECRET')
+        or settings.api_key
+        or os.getenv('MONITORING_API_KEY')
+        or 'dev-secret-key'
+    )
 
 _AUTO_SECRET = os.getenv('MONITORING_JWT_SECRET') or secrets.token_hex(32)
 
@@ -24,7 +35,7 @@ def _b64url_decode(s: str) -> bytes:
 
 
 def create_jwt(claims: dict, exp_seconds: int = 3600) -> str:
-    secret = _get_secret()
+    secret = _get_jwt_secret()
     header = _b64url(json.dumps({"alg": "HS256", "typ": "JWT"}).encode())
     payload = dict(claims)
     payload.setdefault('iat', int(time.time()))
@@ -36,7 +47,7 @@ def create_jwt(claims: dict, exp_seconds: int = 3600) -> str:
 
 
 def verify_jwt(token: str) -> dict:
-    secret = _get_secret()
+    secret = _get_jwt_secret()
     try:
         header_b64, payload_b64, sig_b64 = token.split('.')
     except Exception:
