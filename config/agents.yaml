@@ -1,0 +1,22 @@
+agents:
+  engineering_orchestrator: {name: Engineering Orchestrator, team: leadership, model_policy: architecture_critical}
+  product_owner: {name: Product Owner / Project Manager, team: product, model_policy: senior_reasoning}
+  platform_architect: {name: Platform Architect, team: architecture, model_policy: senior_reasoning}
+  solution_architect: {name: Solution Architect, team: architecture, model_policy: architecture_critical}
+  security_architect: {name: Security Architect, team: architecture, model_policy: senior_reasoning}
+  devops_lead: {name: DevOps Lead, team: devops, model_policy: senior_reasoning}
+  cloud_infrastructure_engineer: {name: Cloud Infrastructure Engineer, team: devops, model_policy: coding}
+  cicd_engineer: {name: CI/CD Engineer, team: devops, model_policy: coding}
+  sre_engineer: {name: SRE / Observability Engineer, team: devops, model_policy: senior_reasoning}
+  finops_engineer: {name: FinOps Engineer, team: devops, model_policy: senior_reasoning}
+  development_lead: {name: Development Lead, team: development, model_policy: coding}
+  frontend_engineer: {name: Frontend Engineer, team: development, model_policy: coding}
+  backend_engineer: {name: Backend Engineer, team: development, model_policy: coding}
+  integration_engineer: {name: Integration Engineer, team: development, model_policy: coding}
+  ai_automation_engineer: {name: AI / Automation Engineer, team: development, model_policy: coding}
+  qa_lead: {name: QA Lead, team: testing, model_policy: senior_reasoning}
+  test_automation_engineer: {name: Test Automation Engineer, team: testing, model_policy: fast_coding}
+  nfr_test_engineer: {name: NFR Test Engineer, team: testing, model_policy: senior_reasoning}
+  application_management_lead: {name: Application Management Lead, team: operations, model_policy: senior_reasoning}
+  application_support_engineer: {name: Application Support Engineer, team: operations, model_policy: fast_agent}
+  production_reliability_engineer: {name: Production Reliability Engineer, team: operations, model_policy: senior_reasoning}

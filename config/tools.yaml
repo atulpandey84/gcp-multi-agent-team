@@ -1,0 +1,16 @@
+tools:
+  knowledge_search: {risk: low, mutation: false}
+  repository_read: {risk: low, mutation: false}
+  repository_write: {risk: medium, mutation: true}
+  git_create_branch: {risk: low, mutation: true}
+  git_commit: {risk: medium, mutation: true}
+  git_pull_request: {risk: medium, mutation: true}
+  terraform_fmt: {risk: low, mutation: true}
+  terraform_validate: {risk: low, mutation: false}
+  terraform_plan: {risk: medium, mutation: false}
+  terraform_apply: {risk: critical, mutation: true, approval_required: true}
+  gcp_read: {risk: low, mutation: false}
+  gcp_mutation: {risk: critical, mutation: true, approval_required: true}
+  iam_policy_change: {risk: critical, mutation: true, approval_required: true}
+  project_delete: {risk: catastrophic, mutation: true, approval_required: true}
+  production_deployment: {risk: critical, mutation: true, approval_required: true}

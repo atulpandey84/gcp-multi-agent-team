@@ -1,0 +1,11 @@
+risk_levels:
+  low: {human_approval: false}
+  medium: {human_approval: false}
+  high: {human_approval: true}
+  critical: {human_approval: true}
+  catastrophic: {human_approval: true}
+environment_policy:
+  local: {allow_gcp_mutations: false, allow_terraform_apply: false, allow_production_deployment: false}
+  dev: {allow_gcp_mutations: true, allow_terraform_apply: true, allow_production_deployment: false}
+  test: {allow_gcp_mutations: true, allow_terraform_apply: true, allow_production_deployment: false}
+  prod: {allow_gcp_mutations: false, allow_terraform_apply: false, allow_production_deployment: false, human_approval_required: true}
