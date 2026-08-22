@@ -220,10 +220,10 @@ def set_approval_decision(approval_id: int, approver: str, decision: str, commen
     cur = conn.cursor()
     ts = datetime.utcnow().isoformat()
     if IS_PG:
-        cur.execute("UPDATE approvals SET status=%s, approver=%s, approver_comments=%s, decision_timestamp=%s WHERE id=%s", (decision, approver, comments, ts, approval_id))
+        cur.execute("UPDATE approvals SET status=%s, approver=%s, approver_comments=%s, decision_timestamp=%s WHERE id=%s AND status='pending'", (decision, approver, comments, ts, approval_id))
     else:
         cur.execute(
-            "UPDATE approvals SET status=?, approver=?, approver_comments=?, decision_timestamp=? WHERE id=?",
+            "UPDATE approvals SET status=?, approver=?, approver_comments=?, decision_timestamp=? WHERE id=? AND status='pending'",
             (decision, approver, comments, ts, approval_id),
         )
     conn.commit()
@@ -234,6 +234,20 @@ def set_approval_decision(approval_id: int, approver: str, decision: str, commen
             append_audit('approval_decision', None, f'approval:{approval_id} decision:{decision} approver:{approver} comments:{comments}')
         except Exception:
             pass
+    return changed > 0
+
+
+def consume_approval(approval_id: int) -> bool:
+    """Mark an approved request as consumed so it cannot authorize a replay."""
+    conn = _conn()
+    cur = conn.cursor()
+    if IS_PG:
+        cur.execute("UPDATE approvals SET status='consumed' WHERE id=%s AND status='approved'", (approval_id,))
+    else:
+        cur.execute("UPDATE approvals SET status='consumed' WHERE id=? AND status='approved'", (approval_id,))
+    conn.commit()
+    changed = cur.rowcount
+    conn.close()
     return changed > 0
 
 

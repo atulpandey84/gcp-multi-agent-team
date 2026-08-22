@@ -86,14 +86,15 @@ class AgentRegistry:
         if task:
             task.cancel()
         agent = self._agents.get(agent_id)
-        if agent:
-            agent.status = "stopped"
-            self._notify({"type": "status", "agent": agent.dict()})
-            try:
-                upsert_agent(agent)
-                append_audit("stop", agent_id, None)
-            except Exception:
-                pass
+        if not agent:
+            return False
+        agent.status = "stopped"
+        self._notify({"type": "status", "agent": agent.dict()})
+        try:
+            upsert_agent(agent)
+            append_audit("stop", agent_id, None)
+        except Exception:
+            pass
         return True
 
     def assign_task(self, agent_id: str, task: dict):
