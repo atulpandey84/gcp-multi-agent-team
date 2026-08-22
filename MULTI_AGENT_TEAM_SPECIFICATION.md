@@ -2927,7 +2927,23 @@ This prevents framework-specific implementation details from changing organizati
 
 ---
 
-# 35. Success Definition
+# 36. Operational Infrastructure & Dependency Architecture
+
+## 36.1 Database Usage Strategy
+- **`data/monitor.db` (SQLite):** Serves as a zero-dependency, local audit trail and human-approval decision database for local development, unit testing, and offline environments.
+- **PostgreSQL (`agent_memory`):** Serves as the high-concurrency production database for institutional memory, vector storage, and persistent multi-agent execution audit records.
+
+## 36.2 Environment & Model Provider Configuration
+- **NVIDIA AI Endpoints (`NVIDIA_API_KEY`):** All active persona model policies (including `deepseek-ai/deepseek-v4-pro`, `deepseek-ai/deepseek-v4-flash`, `nvidia/nemotron-3-ultra-550b-a55b`, and `nvidia/nemotron-3-super-120b-a12b`) are hosted via NVIDIA NIM AI Endpoints and authenticated using a single `NVIDIA_API_KEY`.
+- Unused standalone OpenAI/Anthropic keys are omitted from environment templates to streamline operator secret management.
+
+## 36.3 Dependency Lock Files
+- **`requirements.txt`:** Specifies high-level direct dependencies.
+- **`requirements.lock.txt`:** Pins exact, fully-resolved deterministic package versions for reproducible container builds and CI test pipelines.
+
+---
+
+# 37. Success Definition
 
 The final system should behave like a highly skilled enterprise engineering organization where:
 
