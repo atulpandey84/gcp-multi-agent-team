@@ -81,6 +81,22 @@ button:hover { opacity: 0.9; }
 .waterfall-bar { position: absolute; height: 100%; border-radius: 4px; background: #94a3b8; display: flex; align-items: center; padding: 0 0.5rem; }
 .waterfall-bar.completed { background: var(--accent); color: white; }
 .waterfall-bar.running { background: var(--warn); color: white; }
+.waterfall-bar.failed { background: var(--danger); color: white; }
+
+.flow-node.failed { border-color: var(--danger); background: #fef2f2; }
+.flow-node.failed .flow-node-status { background: var(--danger); color: white; }
+
+.failure-callout {
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  border-radius: 6px;
+  padding: 0.75rem;
+  margin-top: 0.5rem;
+  color: #991b1b;
+}
+.fail-title { font-weight: 700; font-size: 0.8rem; margin-bottom: 0.25rem; }
+.fail-reason { font-family: var(--mono); font-size: 0.75rem; margin-bottom: 0.35rem; }
+.fail-resolution { font-size: 0.75rem; color: #7f1d1d; }
 .waterfall-text { font-family: var(--mono); font-size: 0.68rem; font-weight: 600; white-space: nowrap; }
 
 /* Artifacts Panel */

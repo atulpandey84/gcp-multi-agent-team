@@ -42,6 +42,8 @@ class WorkflowTask:
     completed_at: str | None = None
     output_artifact: str | None = None
     error: str | None = None
+    failure_reason: str | None = None
+    suggested_resolution: str | None = None
 
 @dataclass
 class WorkflowRun:
@@ -224,9 +226,19 @@ class WorkflowRuntime:
                 except Exception as exc:
                     task.status = "failed"
                     task.error = str(exc)
+                    err_msg = str(exc)
+                    if "NVIDIA_API_KEY" in err_msg:
+                        task.failure_reason = "Missing NVIDIA_API_KEY environment variable for model provider"
+                        task.suggested_resolution = "Configure NVIDIA_API_KEY in environment or .env file"
+                    elif "Terraform" in err_msg:
+                        task.failure_reason = "Terraform configuration validation or executable failure"
+                        task.suggested_resolution = "Check terraform syntax or verify terraform CLI is installed in PATH"
+                    else:
+                        task.failure_reason = f"Agent invocation exception: {err_msg}"
+                        task.suggested_resolution = "Review model policy configuration and retry task execution"
                     run.status = "failed"
-                    _write_artifact(run, "failure.json", {"task_id": task.id, "agent": task.agent_id, "failure_type": "agent_invocation", "description": str(exc), "evidence": evidence})
-                    self._emit(run, "task_failed", {"task_id": task.id, "error": str(exc)})
+                    _write_artifact(run, "failure.json", {"task_id": task.id, "agent": task.agent_id, "failure_type": "agent_invocation", "description": err_msg, "failure_reason": task.failure_reason, "suggested_resolution": task.suggested_resolution, "evidence": evidence})
+                    self._emit(run, "task_failed", {"task_id": task.id, "error": err_msg, "failure_reason": task.failure_reason, "suggested_resolution": task.suggested_resolution})
                     return
             terraform = self._terraform_validator(terraform_root)
             gate_results = {name: True for name in GATE_NAMES[:-1]}
