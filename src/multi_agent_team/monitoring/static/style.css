@@ -28,11 +28,15 @@ h2 { font-size: 1.25rem; font-weight: 700; }
 button { background: var(--primary); color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 6px; font-weight: 600; font-family: var(--sans); cursor: pointer; transition: opacity 0.2s; }
 button:hover { opacity: 0.9; }
 
+.btn-approve { background: var(--accent); color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 700; cursor: pointer; }
+.btn-approve:hover { background: #059669; }
+
 .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; }
 .panel-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; }
 
 /* Chat Panel */
 .chat-panel { margin-bottom: 1.5rem; }
+.chat-actions { display: flex; align-items: center; gap: 0.75rem; }
 .chat-history { background: #fafdfb; border: 1px solid var(--border); border-radius: 8px; padding: 1rem; max-height: 250px; overflow-y: auto; margin-bottom: 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
 .chat-msg { padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.9rem; }
 .chat-msg.system { background: var(--accent-light); border-left: 4px solid var(--accent); color: #064e3b; }
@@ -57,6 +61,11 @@ button:hover { opacity: 0.9; }
 .flow-node.completed .flow-node-status { background: var(--accent); color: white; }
 .flow-node.running .flow-node-status { background: var(--warn); color: white; }
 .flow-arrow { font-size: 1.2rem; color: var(--text-muted); }
+
+/* Artifacts Panel */
+.artifact-list { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+.artifact-badge { background: #f0fdf4; border: 1px solid #bbf7d0; padding: 0.5rem 0.8rem; border-radius: 6px; font-family: var(--mono); font-size: 0.75rem; display: flex; align-items: center; gap: 0.4rem; color: #166534; }
+.artifact-status { font-weight: 700; font-size: 0.65rem; background: #dcfce7; padding: 0.1rem 0.3rem; border-radius: 3px; }
 
 /* Launch Command & Metrics */
 .command { display: flex; justify-content: space-between; align-items: center; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; }
