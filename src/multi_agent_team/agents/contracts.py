@@ -12,7 +12,15 @@ def load_contracts() -> Dict[str, Dict[str, Any]]:
     with open(CONTRACTS_PATH, "r", encoding="utf-8") as fh:
         data = yaml.safe_load(fh) or {}
     agents = data.get("agents", [])
-    mapping = {a.get("id"): a for a in agents}
+    mapping: Dict[str, Dict[str, Any]] = {}
+    for contract in agents:
+        if not isinstance(contract, dict):
+            raise ValueError("Each agent contract must be a mapping")
+        validate_contract(contract)
+        agent_id = contract["id"]
+        if agent_id in mapping:
+            raise ValueError(f"Duplicate agent contract: {agent_id}")
+        mapping[agent_id] = contract
     return mapping
 
 
@@ -21,7 +29,12 @@ def get_agent_contract(agent_id: str) -> Dict[str, Any] | None:
 
 
 def validate_contract(contract: Dict[str, Any]) -> bool:
-    required = ["id", "role", "team", "mission", "seniority", "responsibilities", "authority"]
+    required = [
+        "id", "role", "team", "mission", "seniority", "responsibilities",
+        "non_responsibilities", "authority", "capabilities", "tools", "memory",
+        "inputs", "outputs", "collaborators", "escalation_rules", "quality_gates",
+        "definition_of_done", "security_constraints", "failure_policy",
+    ]
     missing = [k for k in required if k not in contract]
     if missing:
         raise ValueError(f"Agent contract missing required keys: {missing}")
@@ -29,6 +42,14 @@ def validate_contract(contract: Dict[str, Any]) -> bool:
     auth = contract.get("authority")
     if not isinstance(auth, dict):
         raise ValueError("authority must be a mapping")
+    for key in ("autonomous", "peer_approval", "human_approval"):
+        if not isinstance(auth.get(key), list):
+            raise ValueError(f"authority.{key} must be a list")
+    if not isinstance(contract.get("memory"), dict):
+        raise ValueError("memory must be a mapping")
+    for key in ("working", "project", "institutional"):
+        if not isinstance(contract["memory"].get(key), list):
+            raise ValueError(f"memory.{key} must be a list")
     return True
 
 

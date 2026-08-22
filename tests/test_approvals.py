@@ -54,3 +54,43 @@ def test_approval_lifecycle():
     assert found
     # status should be running because start action executed
     assert found[0].get('status') in ('running', 'idle', 'stopped')
+
+
+def test_approval_cannot_be_replayed():
+    client = TestClient(app)
+    from src.multi_agent_team.monitoring.auth import create_jwt
+    token = create_jwt({'role': 'admin'})
+    headers = {'authorization': 'Bearer ' + token}
+
+    response = client.post('/api/agents/product_owner/start', headers=headers)
+    approval_id = response.json()['approval_id']
+    response = client.post(
+        f'/api/approvals/{approval_id}/decide',
+        headers=headers,
+        json={'decision': 'approved'},
+    )
+    assert response.status_code == 200
+    replay = client.post(
+        f'/api/approvals/{approval_id}/decide',
+        headers=headers,
+        json={'decision': 'approved'},
+    )
+    assert replay.status_code == 409
+
+
+def test_approval_request_rejects_unknown_actions_and_agents():
+    client = TestClient(app)
+    from src.multi_agent_team.monitoring.auth import create_jwt
+    token = create_jwt({'role': 'admin'})
+    headers = {'authorization': 'Bearer ' + token}
+
+    assert client.post(
+        '/api/approvals/request',
+        headers=headers,
+        json={'action': 'delete_project', 'agent_id': 'product_owner'},
+    ).status_code == 400
+    assert client.post(
+        '/api/approvals/request',
+        headers=headers,
+        json={'action': 'start', 'agent_id': 'missing-agent'},
+    ).status_code == 404

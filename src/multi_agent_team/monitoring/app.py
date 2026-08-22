@@ -8,10 +8,10 @@ from fastapi.responses import FileResponse
 from .config import settings
 from .auth import create_jwt, verify_jwt
 from fastapi.responses import Response
-from .db import init_db, create_approval, list_pending_approvals, set_approval_decision, get_approval, get_audit_rows, has_approved
+from .db import init_db, create_approval, list_pending_approvals, set_approval_decision, consume_approval, get_approval, get_audit_rows, has_approved
 from ..agents.contracts import get_agent_contract
 from .registry import AgentRegistry
-from .workflow_runtime import WorkflowRuntime
+from .workflow_engine import WorkflowRuntime
 from pathlib import Path
 
 ROOT = Path(__file__).parent
@@ -107,7 +107,7 @@ async def create_workflow(payload: dict, dep=Depends(require_role(['operator', '
     objective = (payload.get("objective") or "").strip()
     if not objective:
         raise HTTPException(status_code=400, detail="objective required")
-    run = workflow_runtime.create_run(objective)
+    run = workflow_runtime.create_run(objective, provision=bool(payload.get("provision", False)))
     await workflow_runtime.start_run(run["id"])
     return run
 
@@ -184,8 +184,11 @@ def request_approval(payload: dict, dep=Depends(require_auth)):
     agent_id = payload.get('agent_id')
     details = payload.get('details')
     requester = dep.get('role') if isinstance(dep, dict) else 'unknown'
-    if not action:
-        raise HTTPException(status_code=400, detail='action required')
+    allowed_actions = {'start', 'stop', 'assign'}
+    if action not in allowed_actions:
+        raise HTTPException(status_code=400, detail='unsupported action')
+    if not agent_id or registry.get(agent_id) is None:
+        raise HTTPException(status_code=404, detail='agent not found')
     approval_id = create_approval(requester, action, agent_id, json.dumps(details) if details else None)
     return {"ok": True, "approval_id": approval_id}
 
@@ -201,25 +204,33 @@ def decide_approval(approval_id: int, payload: dict, dep=Depends(require_role(['
     decision = payload.get('decision')
     comments = payload.get('comments')
     approver = dep.get('role') if isinstance(dep, dict) else 'admin'
-    ok = set_approval_decision(int(approval_id), approver, decision, comments)
+    try:
+        ok = set_approval_decision(int(approval_id), approver, decision, comments)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     if not ok:
-        raise HTTPException(status_code=404)
+        raise HTTPException(status_code=409, detail='approval does not exist or is already decided')
     # if approved, execute the action
     # load approval row to get action/agent
     row = get_approval(int(approval_id))
     if row and decision == 'approved':
         action, agent_id, details = row
         if action == 'start':
-            registry.start_agent(agent_id)
+            executed = registry.start_agent(agent_id)
         elif action == 'stop':
-            registry.stop_agent(agent_id)
+            executed = registry.stop_agent(agent_id)
         elif action == 'assign':
             try:
                 payload = json.loads(details) if details else {}
             except Exception:
                 payload = {}
-            registry.assign_task(agent_id, payload)
-    return {"ok": True}
+            executed = registry.assign_task(agent_id, payload)
+        else:
+            raise HTTPException(status_code=400, detail='unsupported action')
+        if not executed:
+            raise HTTPException(status_code=404, detail='agent not found')
+        consume_approval(int(approval_id))
+    return {"ok": True, "executed": bool(row and decision == 'approved')}
 
 
 
@@ -296,7 +307,7 @@ async def websocket_agents(ws: WebSocket):
 @app.post("/api/token")
 def create_token(payload: dict, x_api_key: str | None = None):
     # payload should contain desired role: {"role": "admin"}
-    if settings.api_key and x_api_key != settings.api_key:
+    if not settings.api_key or x_api_key != settings.api_key:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
     role = payload.get('role')
     if not role:

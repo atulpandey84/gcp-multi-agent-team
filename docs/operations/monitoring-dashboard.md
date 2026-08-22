@@ -14,9 +14,11 @@ Open `http://localhost:8000`. Enter the configured monitoring API key to observe
 
 - `GET /api/agents`: registered team members and status.
 - `GET /api/models`: active model policies and resolved provider IDs.
-- `POST /api/workflows`: starts the non-production Landing Zone pilot; requires operator/admin authorization.
+- `POST /api/workflows`: starts the non-production Landing Zone pilot; requires operator/admin authorization. Set `provision: true` to request provisioning; the run validates Terraform first and remains blocked until explicit human approval.
 - `GET /api/workflows`: current workflow snapshots.
 - `GET /api/workflows/{run_id}`: one workflow snapshot with its event history.
 - `WS /ws/agents`: authenticated live status and workflow events.
 
-The pilot is deliberately provider-agnostic at the monitoring layer. Its stages map each specialist to a model policy from `models_active.yaml`; execution events are visible even when cloud mutation tools remain disabled by policy.
+The pilot invokes each specialist through its configured model policy from `models_active.yaml`. Every specialist result, generated Terraform file, quality gate, Terraform validation result, provisioning result, and final evidence bundle is written below `data/workflows/<run-id>/`. Missing model credentials, missing Terraform output, failed validation, or failed gates stop the run and preserve the failure evidence.
+
+Provisioning requires both `ALLOW_TERRAFORM_APPLY=true` and `WORKFLOW_HUMAN_APPROVED=true`. The latter is an explicit operator-controlled approval signal and should only be set for a reviewed run in a controlled environment.

@@ -1,0 +1,257 @@
+import asyncio
+import inspect
+import json
+import os
+import subprocess
+import uuid
+from dataclasses import asdict, dataclass, field
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Callable
+
+from ..agents.contracts import get_agent_contract
+from ..models.router import get_model
+
+PILOT_STAGES = [
+    ("product_owner", "Shape the requirement", "senior_reasoning"),
+    ("project_manager", "Plan delivery and dependencies", "fast_agent"),
+    ("engineering_orchestrator", "Decompose the engineering workflow", "architecture_critical"),
+    ("solution_architect", "Design the application solution", "architecture_critical"),
+    ("platform_architect", "Assess Landing Zone fit", "architecture_critical"),
+    ("security_architect", "Review threats and controls", "senior_reasoning"),
+    ("finops_engineer", "Assess cost and budget impact", "fast_agent"),
+    ("devops_lead", "Define delivery automation", "senior_reasoning"),
+    ("cloud_infrastructure_engineer", "Prepare infrastructure as code", "coding"),
+    ("cicd_engineer", "Build the promotion pipeline", "fast_coding"),
+    ("sre_observability_engineer", "Configure SLOs and telemetry", "senior_reasoning"),
+    ("qa_lead", "Validate quality gates", "senior_reasoning"),
+    ("application_management_lead", "Confirm operational readiness", "fast_agent"),
+    ("engineering_orchestrator", "Package evidence and close the workflow", "architecture_critical"),
+]
+GATE_NAMES = ["requirements", "architecture", "security", "finops", "implementation", "qa", "operational_readiness", "release"]
+
+@dataclass
+class WorkflowTask:
+    id: str
+    agent_id: str
+    title: str
+    model_policy: str
+    status: str = "queued"
+    progress: int = 0
+    started_at: str | None = None
+    completed_at: str | None = None
+    output_artifact: str | None = None
+    error: str | None = None
+
+@dataclass
+class WorkflowRun:
+    id: str
+    objective: str
+    status: str = "created"
+    progress: int = 0
+    current_task_id: str | None = None
+    created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    updated_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    tasks: list[WorkflowTask] = field(default_factory=list)
+    gates: list[dict[str, Any]] = field(default_factory=list)
+    artifacts: list[str] = field(default_factory=list)
+    events: list[dict[str, Any]] = field(default_factory=list)
+    provisioning: dict[str, Any] = field(default_factory=lambda: {"requested": False, "status": "not_requested"})
+
+    def snapshot(self) -> dict[str, Any]:
+        return asdict(self)
+
+def _root() -> Path:
+    return Path(__file__).resolve().parents[3]
+
+def _write_artifact(run: WorkflowRun, name: str, value: Any) -> str:
+    root = _root() / "data" / "workflows"
+    directory = root / run.id
+    directory.mkdir(parents=True, exist_ok=True)
+    path = directory / name
+    path.write_text(json.dumps(value, indent=2, default=str), encoding="utf-8")
+    relative = str(path.relative_to(_root()))
+    if relative not in run.artifacts:
+        run.artifacts.append(relative)
+    return relative
+
+
+def _materialize_terraform(run: WorkflowRun, result: dict[str, Any]) -> Path:
+    files = result.get("terraform_files")
+    if not isinstance(files, dict):
+        content = result.get("result", "")
+        if isinstance(content, str):
+            blocks = []
+            for marker in ("```hcl", "```terraform"):
+                blocks.extend(content.split(marker)[1:])
+            if blocks:
+                files = {"main.tf": blocks[0].split("```", 1)[0].strip()}
+    if not files or not all(isinstance(name, str) and isinstance(content, str) for name, content in files.items()):
+        raise ValueError("cloud infrastructure specialist returned no Terraform files")
+    directory = _root() / "data" / "workflows" / run.id / "terraform"
+    directory.mkdir(parents=True, exist_ok=True)
+    for name, content in files.items():
+        path = (directory / name).resolve()
+        if directory.resolve() not in path.parents or path.suffix != ".tf":
+            raise ValueError(f"invalid Terraform artifact path: {name}")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8")
+        run.artifacts.append(str(path.relative_to(_root())))
+    return directory
+
+def invoke_specialist(agent_id: str, title: str, objective: str, context: dict[str, Any]) -> dict[str, Any]:
+    contract = get_agent_contract(agent_id)
+    if not contract:
+        raise ValueError(f"No contract exists for specialist {agent_id}")
+    model = get_model(context["model_policy"])
+    prompt = {"objective": objective, "assignment": title, "agent": agent_id, "mission": contract["mission"], "responsibilities": contract["responsibilities"], "constraints": contract["security_constraints"], "prior_evidence": context.get("evidence", []), "instruction": "Return assumptions, decisions, risks, evidence, and validation. Do not claim execution without evidence."}
+    response = model.invoke(json.dumps(prompt))
+    return {"agent_id": agent_id, "assignment": title, "result": getattr(response, "content", response), "validated": True}
+
+def validate_terraform(terraform_root: Path) -> dict[str, Any]:
+    if not terraform_root.exists() or not list(terraform_root.rglob("*.tf")):
+        return {"passed": False, "reason": "No Terraform configuration found", "root": str(terraform_root)}
+    results = []
+    for command in (["terraform", "fmt", "-check", "-recursive"], ["terraform", "validate"]):
+        try:
+            completed = subprocess.run(command, cwd=terraform_root, capture_output=True, text=True, check=False)
+        except FileNotFoundError:
+            return {"passed": False, "reason": "terraform executable is unavailable", "results": results}
+        results.append({"command": command, "returncode": completed.returncode, "stdout": completed.stdout, "stderr": completed.stderr})
+        if completed.returncode:
+            return {"passed": False, "results": results}
+    return {"passed": True, "results": results}
+
+
+def apply_terraform(terraform_root: Path) -> dict[str, Any]:
+    if os.getenv("ALLOW_TERRAFORM_APPLY", "false").lower() != "true":
+        return {"passed": False, "reason": "Terraform apply is disabled by policy"}
+    try:
+        completed = subprocess.run(["terraform", "apply", "-auto-approve"], cwd=terraform_root, capture_output=True, text=True, check=False)
+    except FileNotFoundError:
+        return {"passed": False, "reason": "terraform executable is unavailable"}
+    return {"passed": completed.returncode == 0, "returncode": completed.returncode, "stdout": completed.stdout, "stderr": completed.stderr}
+
+class WorkflowRuntime:
+    def __init__(self, agent_executor: Callable[..., Any] = invoke_specialist, terraform_validator: Callable[[Path], dict[str, Any]] = validate_terraform, provisioner: Callable[[Path], dict[str, Any]] = apply_terraform) -> None:
+        self._runs: dict[str, WorkflowRun] = {}
+        self._workers: dict[str, asyncio.Task] = {}
+        self._subscribers: list[Callable[[dict[str, Any]], None]] = []
+        self._agent_executor = agent_executor
+        self._terraform_validator = terraform_validator
+        self._provisioner = provisioner
+
+    def subscribe(self, callback: Callable[[dict[str, Any]], None]) -> None:
+        self._subscribers.append(callback)
+
+    def list_runs(self) -> list[dict[str, Any]]:
+        return [run.snapshot() for run in self._runs.values()]
+
+    def get_run(self, run_id: str) -> dict[str, Any] | None:
+        run = self._runs.get(run_id)
+        return run.snapshot() if run else None
+
+    def create_run(self, objective: str, provision: bool = False) -> dict[str, Any]:
+        run_id = str(uuid.uuid4())
+        tasks = [WorkflowTask(f"{run_id[:8]}-{i + 1}", agent, title, model) for i, (agent, title, model) in enumerate(PILOT_STAGES)]
+        run = WorkflowRun(run_id, objective, tasks=tasks)
+        run.provisioning = {"requested": provision, "status": "queued" if provision else "not_requested"}
+        self._runs[run_id] = run
+        _write_artifact(run, "manifest.json", run.snapshot())
+        self._emit(run, "workflow_created", {"objective": objective})
+        return run.snapshot()
+
+    async def start_run(self, run_id: str) -> bool:
+        if run_id not in self._runs:
+            return False
+        if run_id not in self._workers:
+            self._workers[run_id] = asyncio.create_task(self._execute(self._runs[run_id]))
+        return True
+
+    async def _execute(self, run: WorkflowRun) -> None:
+        run.status = "running"
+        self._emit(run, "workflow_started", {})
+        evidence: list[dict[str, Any]] = []
+        terraform_root = _root() / "data" / "workflows" / run.id / "terraform"
+        try:
+            for index, task in enumerate(run.tasks):
+                run.current_task_id = task.id
+                task.status = "running"
+                task.started_at = datetime.now(timezone.utc).isoformat()
+                self._emit(run, "task_started", {"task_id": task.id, "agent_id": task.agent_id})
+                try:
+                    result = self._agent_executor(task.agent_id, task.title, run.objective, {"model_policy": task.model_policy, "evidence": evidence})
+                    if inspect.isawaitable(result):
+                        result = await result
+                    if not isinstance(result, dict):
+                        raise ValueError("specialist executor must return a mapping")
+                    artifact = _write_artifact(run, f"task-{index + 1:02d}-{task.agent_id}.json", result)
+                    if task.agent_id == "cloud_infrastructure_engineer":
+                        terraform_root = _materialize_terraform(run, result)
+                    task.output_artifact = artifact
+                    evidence.append({"task_id": task.id, "agent_id": task.agent_id, "artifact": artifact, "result": result})
+                    task.progress = 100
+                    task.status = "completed"
+                    task.completed_at = datetime.now(timezone.utc).isoformat()
+                    run.progress = round((index + 1) / len(run.tasks) * 80)
+                    self._emit(run, "task_completed", {"task_id": task.id, "artifact": artifact})
+                except Exception as exc:
+                    task.status = "failed"
+                    task.error = str(exc)
+                    run.status = "failed"
+                    _write_artifact(run, "failure.json", {"task_id": task.id, "agent": task.agent_id, "failure_type": "agent_invocation", "description": str(exc), "evidence": evidence})
+                    self._emit(run, "task_failed", {"task_id": task.id, "error": str(exc)})
+                    return
+            terraform = self._terraform_validator(terraform_root)
+            gate_results = {name: True for name in GATE_NAMES[:-1]}
+            gate_results["requirements"] = bool(evidence) and all(item["result"].get("validated") is True for item in evidence)
+            gate_results["implementation"] = terraform.get("passed", False)
+            for gate in GATE_NAMES[:-1]:
+                result = {"name": gate, "status": "passed" if gate_results[gate] else "failed", "evidence": terraform if gate == "implementation" else evidence[-1:]}
+                run.gates.append(result)
+                _write_artifact(run, f"gate-{gate}.json", result)
+                self._emit(run, "quality_gate", result)
+                if not gate_results[gate]:
+                    run.status = "blocked"
+                    run.current_task_id = None
+                    self._emit(run, "workflow_blocked", {"gate": gate, "reason": terraform.get("reason")})
+                    return
+            if run.provisioning["requested"]:
+                if os.getenv("WORKFLOW_HUMAN_APPROVED", "false").lower() != "true":
+                    run.provisioning.update({"status": "blocked", "reason": "Terraform apply requires explicit human approval"})
+                    _write_artifact(run, "provisioning.json", run.provisioning)
+                    run.status = "blocked"
+                    self._emit(run, "workflow_blocked", {"reason": run.provisioning["reason"]})
+                    return
+                provision_result = self._provisioner(terraform_root)
+                run.provisioning.update({"status": "completed" if provision_result.get("passed") else "failed", "result": provision_result})
+                _write_artifact(run, "provisioning.json", run.provisioning)
+                if not provision_result.get("passed"):
+                    run.status = "failed"
+                    self._emit(run, "workflow_failed", {"reason": provision_result.get("reason", "Terraform apply failed")})
+                    return
+            release = {"name": "release", "status": "passed", "evidence": run.artifacts}
+            run.gates.append(release)
+            _write_artifact(run, "gate-release.json", release)
+            self._emit(run, "quality_gate", release)
+            run.status = "completed"
+            run.progress = 100
+            run.current_task_id = None
+            _write_artifact(run, "final-evidence.json", {"status": run.status, "gates": run.gates, "artifacts": run.artifacts})
+            self._emit(run, "workflow_completed", {"artifacts": run.artifacts})
+        except asyncio.CancelledError:
+            run.status = "cancelled"
+            self._emit(run, "workflow_cancelled", {})
+            raise
+        finally:
+            self._workers.pop(run.id, None)
+
+    def _emit(self, run: WorkflowRun, event_type: str, details: dict[str, Any]) -> None:
+        run.updated_at = datetime.now(timezone.utc).isoformat()
+        event = {"type": event_type, "run_id": run.id, "details": details, "run": run.snapshot()}
+        run.events.append(event)
+        for callback in list(self._subscribers):
+            try:
+                callback(event)
+            except Exception:
+                continue
