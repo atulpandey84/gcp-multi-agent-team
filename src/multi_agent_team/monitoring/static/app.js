@@ -1,12 +1,63 @@
-let ws, agents = [], currentRun = null;
-const headers = () => { const result = {}; const key = document.getElementById('apiKey').value; const token = document.getElementById('token').value; if (key) result['x-api-key'] = key; if (token) result.authorization = `Bearer ${token}`; return result; };
-const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[char]));
+let agents = [];
+let currentRun = null;
+let ws = null;
 
-async function api(path, options = {}) { const response = await fetch(path, {...options, headers: {...headers(), ...(options.headers || {})}}); if (!response.ok) throw new Error(`${response.status}`); return response.json(); }
+const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+
+function headers() {
+  const h = {};
+  const key = document.getElementById('apiKey').value;
+  const token = document.getElementById('token').value;
+  if (token) h.Authorization = `Bearer ${token}`;
+  if (key) h['x-api-key'] = key;
+  return h;
+}
+
+async function api(path, options = {}) {
+  const response = await fetch(path, { ...options, headers: { ...headers(), ...(options.headers || {}) } });
+  if (!response.ok) throw new Error(`${response.status}`);
+  return response.json();
+}
+
+function renderFlowDiagram() {
+  const flowContainer = document.getElementById('workflowFlowDiagram');
+  if (!flowContainer) return;
+
+  const stages = [
+    { id: 'product', name: 'Product & PM', desc: 'Requirements & Scope', agents: ['product_owner', 'project_manager'] },
+    { id: 'architecture', name: 'Architecture', desc: 'Platform & Solution Design', agents: ['platform_architect', 'solution_architect'] },
+    { id: 'security_finops', name: 'Security & FinOps', desc: 'Threat Model & Cost', agents: ['security_architect', 'finops_engineer'] },
+    { id: 'devops_impl', name: 'DevOps & Dev', desc: 'IaC & Implementation', agents: ['devops_lead', 'cloud_infrastructure_engineer', 'backend_engineer'] },
+    { id: 'qa_nfr', name: 'QA & Testing', desc: 'Quality & NFR Gates', agents: ['qa_lead', 'test_automation_engineer', 'nfr_test_engineer'] },
+    { id: 'operations', name: 'Operations & SRE', desc: 'Readiness & Production', agents: ['application_management_lead', 'sre_observability_engineer', 'production_reliability_engineer'] }
+  ];
+
+  const tasksMap = Object.fromEntries((currentRun?.tasks || []).map(t => [t.agent_id, t]));
+  const progress = currentRun?.progress || 0;
+
+  const html = stages.map((stage, idx) => {
+    const stageTasks = stage.agents.map(aid => tasksMap[aid]).filter(Boolean);
+    const isCompleted = stageTasks.length > 0 && stageTasks.every(t => t.status === 'completed');
+    const isRunning = stageTasks.some(t => t.status === 'running');
+    const statusClass = isCompleted ? 'completed' : (isRunning ? 'running' : (progress > 0 && idx === 0 ? 'completed' : 'pending'));
+
+    return `
+      <div class="flow-node ${statusClass}">
+        <div class="flow-step-num">Stage ${idx + 1}</div>
+        <div class="flow-node-title">${escapeHtml(stage.name)}</div>
+        <div class="flow-node-desc">${escapeHtml(stage.desc)}</div>
+        <div class="flow-node-status">${statusClass.toUpperCase()}</div>
+      </div>
+      ${idx < stages.length - 1 ? '<div class="flow-arrow">➔</div>' : ''}
+    `;
+  }).join('');
+
+  flowContainer.innerHTML = html;
+}
+
 function renderAgents() {
   const taskMap = Object.fromEntries((currentRun?.tasks || []).map(task => [task.agent_id, task]));
 
-  // Group agents by team
   const teams = {};
   agents.forEach(agent => {
     const teamName = agent.team || 'Unassigned';
@@ -82,6 +133,7 @@ function renderRun() {
   document.getElementById('runStatus').textContent = currentRun.status;
   renderAgents();
   renderCollaboration();
+  renderFlowDiagram();
 }
 
 function renderTimeline() {
@@ -91,8 +143,89 @@ function renderTimeline() {
     .reverse()
     .map(event => `<div class="event"><span class="event-dot"></span><div><b>${escapeHtml(event.type.replaceAll('_', ' '))}</b><small>${new Date(event.run.updated_at).toLocaleTimeString()}</small></div></div>`).join('') || '<p class="muted">Launch a workflow to see governed handoffs.</p>';
 }
-async function loadData() { [agents, currentRun] = await Promise.all([api('/api/agents'), api('/api/workflows').then(runs => runs.at(-1) || null)]); const models = await api('/api/models'); document.getElementById('modelCount').textContent = models.length; document.getElementById('models').innerHTML = models.map(model => `<div class="model"><span class="model-dot"></span><div><b>${escapeHtml(model.policy)}</b><small>${escapeHtml(model.model)}</small></div></div>`).join(''); renderRun(); renderTimeline(); }
-function connect() { const key = document.getElementById('apiKey').value; const token = document.getElementById('token').value; const query = token ? `?token=${encodeURIComponent(token)}` : (key ? `?api_key=${encodeURIComponent(key)}` : ''); if (ws) ws.close(); ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws/agents${query}`); ws.onopen = () => { document.getElementById('connectionDot').classList.add('online'); document.getElementById('connectionText').textContent = 'Live'; loadData().catch(() => {}); }; ws.onclose = () => { document.getElementById('connectionDot').classList.remove('online'); document.getElementById('connectionText').textContent = 'Disconnected'; }; ws.onmessage = event => { const message = JSON.parse(event.data); if (message.run) { currentRun = message.run; renderRun(); renderTimeline(); } }; }
-document.getElementById('connect').addEventListener('click', connect);
-document.getElementById('launch').addEventListener('click', async () => { try { currentRun = await api('/api/workflows', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({objective: 'Provision a new non-production GCP application environment using the approved Landing Zone.'})}); renderRun(); renderTimeline(); } catch (error) { alert('Launch failed. Connect with an operator API key.'); } });
 
+async function loadData() {
+  [agents, currentRun] = await Promise.all([
+    api('/api/agents'),
+    api('/api/workflows').then(runs => runs.at(-1) || null)
+  ]);
+  const models = await api('/api/models');
+  document.getElementById('modelCount').textContent = models.length;
+  document.getElementById('models').innerHTML = models.map(model => `
+    <div class="model">
+      <span class="model-dot"></span>
+      <div><b>${escapeHtml(model.policy)}</b><small>${escapeHtml(model.model)}</small></div>
+    </div>
+  `).join('');
+  renderRun();
+  renderTimeline();
+}
+
+function connect() {
+  const key = document.getElementById('apiKey').value;
+  const token = document.getElementById('token').value;
+  const query = token ? `?token=${encodeURIComponent(token)}` : (key ? `?api_key=${encodeURIComponent(key)}` : '');
+  if (ws) ws.close();
+  ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws/agents${query}`);
+  ws.onopen = () => {
+    document.getElementById('connectionDot').classList.add('online');
+    document.getElementById('connectionText').textContent = 'Live';
+    loadData().catch(() => {});
+  };
+  ws.onclose = () => {
+    document.getElementById('connectionDot').classList.remove('online');
+    document.getElementById('connectionText').textContent = 'Disconnected';
+  };
+  ws.onmessage = event => {
+    const message = JSON.parse(event.data);
+    if (message.run) {
+      currentRun = message.run;
+      renderRun();
+      renderTimeline();
+    }
+  };
+}
+
+async function submitRequirement() {
+  const inputEl = document.getElementById('chatInput');
+  const chatHistory = document.getElementById('chatHistory');
+  const reqText = (inputEl.value || '').trim();
+  if (!reqText) return;
+
+  // Append Executive user message to chat UI
+  const userMsg = document.createElement('div');
+  userMsg.className = 'chat-msg user';
+  userMsg.innerHTML = `<div class="chat-role">EXECUTIVE BUSINESS PARTNER</div><div class="chat-text">${escapeHtml(reqText)}</div>`;
+  chatHistory.appendChild(userMsg);
+  inputEl.value = '';
+
+  try {
+    const run = await api('/api/workflows', {
+      method: 'POST',
+      body: JSON.stringify({ objective: reqText, provision: true }),
+      headers: { 'Content-Type': 'application/json' }
+    });
+    currentRun = run;
+    renderRun();
+    renderTimeline();
+
+    const ackMsg = document.createElement('div');
+    ackMsg.className = 'chat-msg ack';
+    ackMsg.innerHTML = `<div class="chat-role">Product Owner & Project Manager</div><div class="chat-text">Requirement received. Decomposing tasks and delegating to Platform Architect, Security Architect, DevOps, QA, and SRE. Workflow Run ID: <code>${escapeHtml(run.id)}</code>.</div>`;
+    chatHistory.appendChild(ackMsg);
+    chatHistory.scrollTop = chatHistory.scrollHeight;
+  } catch (err) {
+    const errMsg = document.createElement('div');
+    errMsg.className = 'chat-msg error';
+    errMsg.innerHTML = `<div class="chat-role">SYSTEM ERROR</div><div class="chat-text">Could not submit requirement. Please ensure you are connected with an operator or admin API key/token.</div>`;
+    chatHistory.appendChild(errMsg);
+  }
+}
+
+document.getElementById('connect').addEventListener('click', connect);
+const connBtn = document.getElementById('connectBtn');
+if (connBtn) connBtn.addEventListener('click', connect);
+document.getElementById('sendChatBtn').addEventListener('click', submitRequirement);
+document.getElementById('chatInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') submitRequirement();
+});
