@@ -2934,7 +2934,10 @@ This prevents framework-specific implementation details from changing organizati
 
 ## 36.2 Environment & Model Provider Configuration
 - **NVIDIA AI Endpoints (`NVIDIA_API_KEY`):** All active persona model policies (including `deepseek-ai/deepseek-v4-pro`, `deepseek-ai/deepseek-v4-flash`, `nvidia/nemotron-3-ultra-550b-a55b`, and `nvidia/nemotron-3-super-120b-a12b`) are hosted via NVIDIA NIM AI Endpoints and authenticated using a single `NVIDIA_API_KEY`.
-- Unused standalone OpenAI/Anthropic keys are omitted from environment templates to streamline operator secret management.
+- **Smart Ollama Fallback Routing:** If NVIDIA endpoints experience downtime or API 500 errors, execution automatically falls back to an Ollama instance based on real-time health, responsiveness, and hardware load metrics between:
+  - **Local GPU/CPU Instance (`OLLAMA_LOCAL_URL`):** `http://192.168.31.135:11434`
+  - **Remote CPU Instance (`OLLAMA_REMOTE_URL`):** `http://192.168.31.63:11434`
+- Every executed task records and displays its exact model name, provider, and host location badge on the Control Room UI.
 
 ## 36.3 Dependency Lock Files
 - **`requirements.txt`:** Specifies high-level direct dependencies.
