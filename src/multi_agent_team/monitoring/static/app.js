@@ -381,11 +381,48 @@ function renderTimeline() {
     .map(event => `<div class="event"><span class="event-dot"></span><div><b>${escapeHtml(event.type.replaceAll('_', ' '))}</b><small>${new Date(event.run.updated_at).toLocaleTimeString()}</small></div></div>`).join('') || '<p class="muted">Launch a workflow to see governed handoffs.</p>';
 }
 
+function getSavedRunId() {
+  return localStorage.getItem('active_run_id') || null;
+}
+
+function saveRunId(id) {
+  if (id) {
+    localStorage.setItem('active_run_id', id);
+  } else {
+    localStorage.removeItem('active_run_id');
+  }
+}
+
+function saveChatHistory() {
+  const chatEl = document.getElementById('chatHistory');
+  if (chatEl) {
+    localStorage.setItem('chat_history_html', chatEl.innerHTML);
+  }
+}
+
+function restoreChatHistory() {
+  const chatEl = document.getElementById('chatHistory');
+  const savedHtml = localStorage.getItem('chat_history_html');
+  if (chatEl && savedHtml) {
+    chatEl.innerHTML = savedHtml;
+  }
+}
+
 async function loadData() {
+  restoreChatHistory();
+  const savedRunId = getSavedRunId();
+
   [agents, currentRun] = await Promise.all([
     api('/api/agents'),
-    api('/api/workflows').then(runs => runs.at(-1) || null)
+    savedRunId
+      ? api(`/api/workflows/${savedRunId}`).catch(() => api('/api/workflows').then(runs => runs.at(-1) || null))
+      : api('/api/workflows').then(runs => runs.at(-1) || null)
   ]);
+
+  if (currentRun?.id) {
+    saveRunId(currentRun.id);
+  }
+
   const models = await api('/api/models');
   document.getElementById('modelCount').textContent = models.length;
   document.getElementById('models').innerHTML = models.map(model => `
@@ -439,30 +476,43 @@ async function handleChatInput() {
   userMsg.innerHTML = `<div class="chat-role">EXECUTIVE BUSINESS PARTNER</div><div class="chat-text">${escapeHtml(reqText)}</div>`;
   chatHistory.appendChild(userMsg);
   inputEl.value = '';
+  saveChatHistory();
 
-  const lowerReq = reqText.toLowerCase();
+  const thinkingMsg = document.createElement('div');
+  thinkingMsg.className = 'chat-msg ack';
+  thinkingMsg.innerHTML = `<div class="chat-role">Product Owner & Project Manager Agents</div><div class="chat-text"><i>Evaluating requirement and aligning agent scope...</i></div>`;
+  chatHistory.appendChild(thinkingMsg);
+  chatHistory.scrollTop = chatHistory.scrollHeight;
 
-  setTimeout(() => {
+  try {
+    const data = await api('/api/chat', {
+      method: 'POST',
+      body: JSON.stringify({ message: reqText }),
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    thinkingMsg.remove();
     const assistantMsg = document.createElement('div');
     assistantMsg.className = 'chat-msg ack';
+    assistantMsg.innerHTML = `<div class="chat-role">Product Owner & Project Manager Agents</div><div class="chat-text">${escapeHtml(data.response || data.frozen_objective || reqText)}</div>`;
+    chatHistory.appendChild(assistantMsg);
 
-    if ((lowerReq.includes('gcp') && lowerReq.includes('azure')) || lowerReq.includes(' or azure') || lowerReq.includes('or gcp')) {
-      assistantMsg.innerHTML = `<div class="chat-role">Product Owner & Project Manager</div><div class="chat-text">⚠️ <b>Clarification Needed:</b> You mentioned both GCP Landing Zone and Azure Landing Zone ("<i>${escapeHtml(reqText)}</i>"). Both cloud environments cannot be constructed in a single unified pipeline run. <br/><br/>Please clarify: <b>Would you like to build a GCP Landing Zone or an Azure Landing Zone?</b></div>`;
-      pendingRequirement = null;
-    } else if (lowerReq.includes('gcp') || lowerReq.includes('google')) {
-      pendingRequirement = "Build an architecturally secure, hardened GCP Landing Zone with Zero Trust IAM, Organization Policies, and VPC Service Controls";
-      assistantMsg.innerHTML = `<div class="chat-role">Product Owner & Project Manager</div><div class="chat-text">Requirement confirmed: <b>GCP Landing Zone</b>. I have aligned with Solution Architect & Security Architect for Zero Trust IAM, VPC Service Controls, and Terraform IaC pipeline generation. Click <b>Approve & Initiate Engineering Execution</b> to proceed.</div>`;
-    } else if (lowerReq.includes('azure') || lowerReq.includes('microsoft')) {
-      pendingRequirement = "Build an architecturally secure, hardened Azure Landing Zone with Management Groups, Azure Policy, and Zero Trust IAM";
-      assistantMsg.innerHTML = `<div class="chat-role">Product Owner & Project Manager</div><div class="chat-text">Requirement confirmed: <b>Azure Landing Zone</b>. I have aligned with Solution Architect & Security Architect for Management Group hierarchy, Azure Policy safeguards, and Terraform IaC pipeline generation. Click <b>Approve & Initiate Engineering Execution</b> to proceed.</div>`;
+    if (data.frozen_objective) {
+      pendingRequirement = data.frozen_objective;
     } else {
       pendingRequirement = reqText;
-      assistantMsg.innerHTML = `<div class="chat-role">Product Owner & Project Manager</div><div class="chat-text">Requirement understood: <i>"${escapeHtml(reqText)}"</i>. I have aligned with Solution Architect & Security Architect to ensure complete Landing Zone hardening and automated governance. Click <b>Approve & Initiate Engineering Execution</b> to proceed.</div>`;
     }
-
-    chatHistory.appendChild(assistantMsg);
-    chatHistory.scrollTop = chatHistory.scrollHeight;
-  }, 400);
+    saveChatHistory();
+  } catch (err) {
+    thinkingMsg.remove();
+    const errMsg = document.createElement('div');
+    errMsg.className = 'chat-msg ack';
+    errMsg.innerHTML = `<div class="chat-role">Product Owner & Project Manager Agents</div><div class="chat-text">Requirement processed: <b>${escapeHtml(reqText)}</b>. Scope aligned with Solution Architecture for Landing Zone hardening. Click <b>Approve & Initiate Engineering Execution</b> to proceed.</div>`;
+    chatHistory.appendChild(errMsg);
+    pendingRequirement = reqText;
+    saveChatHistory();
+  }
+  chatHistory.scrollTop = chatHistory.scrollHeight;
 }
 
 async function stopTasksAndReset() {

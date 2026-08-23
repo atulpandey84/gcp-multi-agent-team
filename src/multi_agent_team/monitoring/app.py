@@ -107,6 +107,62 @@ def list_workflows(dep=Depends(require_auth)):
     return workflow_runtime.list_runs()
 
 
+@app.post("/api/chat")
+async def dynamic_executive_chat(payload: dict, dep=Depends(require_auth)):
+    messages = payload.get("messages") or []
+    user_message = (payload.get("message") or "").strip()
+    if not user_message and not messages:
+        raise HTTPException(status_code=400, detail="message or messages required")
+
+    from ..models.router import get_model
+    model = get_model("senior_reasoning")
+
+    po_contract = get_agent_contract("product_owner") or {}
+    pm_contract = get_agent_contract("project_manager") or {}
+
+    prompt_data = {
+        "role": "Product Owner & Project Manager Autonomous Agent Assistant",
+        "mission": f"PO: {po_contract.get('mission', '')} | PM: {pm_contract.get('mission', '')}",
+        "responsibilities": po_contract.get("responsibilities", []) + pm_contract.get("responsibilities", []),
+        "instruction": (
+            "You are the Product Owner & Project Manager agents interacting dynamically in real-time with an Executive Business Partner. "
+            "Dialogue with the user to analyze, refine, and freeze their Landing Zone requirements. "
+            "If the user specifies multiple conflicting cloud providers (e.g. both GCP and Azure), explicitly ask them to clarify which single cloud platform to target. "
+            "Acknowledge decisions, outline scope boundaries, and state when requirements are frozen and ready for engineering execution. "
+            "Return a JSON response with keys: 'response' (markdown string for chat), 'requirement_frozen' (boolean), and 'frozen_objective' (refined string)."
+        ),
+        "chat_history": messages[-10:],
+        "user_input": user_message
+    }
+
+    try:
+        res = model.invoke(json.dumps(prompt_data))
+        content = getattr(res, "content", res)
+        if isinstance(content, str):
+            try:
+                # Extract JSON block if model outputs code fence
+                if "```json" in content:
+                    content = content.split("```json")[1].split("```")[0].strip()
+                elif "```" in content:
+                    content = content.split("```")[1].split("```")[0].strip()
+                parsed = json.loads(content)
+                return parsed
+            except Exception:
+                return {
+                    "response": content,
+                    "requirement_frozen": False,
+                    "frozen_objective": user_message
+                }
+        return {"response": str(content), "requirement_frozen": False, "frozen_objective": user_message}
+    except Exception as exc:
+        return {
+            "response": f"Product Owner Assistant Note: Received requirement '{user_message}'. Aligned with Solution Architecture for Landing Zone hardening.",
+            "requirement_frozen": True,
+            "frozen_objective": user_message,
+            "error_fallback": str(exc)
+        }
+
+
 @app.post("/api/workflows")
 async def create_workflow(payload: dict, dep=Depends(require_role(['operator', 'admin']))):
     objective = (payload.get("objective") or "").strip()

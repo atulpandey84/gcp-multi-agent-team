@@ -448,9 +448,26 @@ class WorkflowRuntime:
                     task.error = str(exc)
                     err_msg = str(exc)
                     task.reasoning_status = f"Failed: {err_msg[:60]}"
+
+                    # Extract target model and host location from error message if present
+                    if "System Host" in err_msg or "http://" in err_msg or "192.168" in err_msg:
+                        task.model_provider = "Ollama Local/Remote Fallback"
+                        if "http://" in err_msg:
+                            host_url = err_msg.split("http://")[1].split()[0].rstrip("'/\"")
+                            task.model_location = f"http://{host_url}"
+                        else:
+                            task.model_location = "Ollama Target Host"
+                        task.executed_model = task.model_policy
+                    else:
+                        task.model_provider = "NVIDIA NIM / Ollama Fallback"
+                        task.model_location = "Primary Provider & Local Host"
+
                     if "NVIDIA_API_KEY" in err_msg:
-                        task.failure_reason = "Missing NVIDIA_API_KEY environment variable for model provider"
+                        task.failure_reason = "Missing NVIDIA_API_KEY environment variable for primary model provider"
                         task.suggested_resolution = "Configure NVIDIA_API_KEY in environment or .env file"
+                    elif "not found" in err_msg or "missing" in err_msg:
+                        task.failure_reason = f"Target Ollama model not installed on host ({err_msg})"
+                        task.suggested_resolution = "Ensure requested Ollama model is pulled on target host or select installed alternate model"
                     elif "Terraform" in err_msg:
                         task.failure_reason = "Terraform configuration validation or executable failure"
                         task.suggested_resolution = "Check terraform syntax or verify terraform CLI is installed in PATH"
