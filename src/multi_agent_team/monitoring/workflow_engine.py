@@ -250,10 +250,6 @@ class WorkflowRuntime:
         worker = self._workers.get(run_id)
         if worker and not worker.done():
             worker.cancel()
-            try:
-                await worker
-            except asyncio.CancelledError:
-                pass
         run.status = "cancelled"
         run.current_task_id = None
         event = self._task_events.get(run_id)
