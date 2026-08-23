@@ -1,16 +1,29 @@
 import os
 from datetime import datetime, timezone
 from pathlib import Path
+from dotenv import load_dotenv
 import psycopg
 from .models import Agent
 
-# Mandatory PostgreSQL configuration
-DATABASE_URL = os.environ.get('MONITORING_DATABASE_URL') or os.environ.get('DATABASE_URL') or 'postgresql://agent:change-me@localhost:5432/agent_memory'
+load_dotenv()
+
+def _get_db_url() -> str:
+    url = os.environ.get('MONITORING_DATABASE_URL') or os.environ.get('DATABASE_URL')
+    if url:
+        return url
+    host = os.environ.get('POSTGRES_HOST', 'localhost')
+    port = os.environ.get('POSTGRES_PORT', '5432')
+    db = os.environ.get('POSTGRES_DB', 'agent_memory')
+    user = os.environ.get('POSTGRES_USER', 'agent')
+    password = os.environ.get('POSTGRES_PASSWORD', 'change-me')
+    return f"postgresql://{user}:{password}@{host}:{port}/{db}"
+
+DATABASE_URL = _get_db_url()
 
 
 def init_db() -> None:
     try:
-        conn = psycopg.connect(DATABASE_URL)
+        conn = psycopg.connect(DATABASE_URL, connect_timeout=3)
         cur = conn.cursor()
         cur.execute(
             """
@@ -59,7 +72,7 @@ def init_db() -> None:
 
 def _conn():
     try:
-        return psycopg.connect(DATABASE_URL)
+        return psycopg.connect(DATABASE_URL, connect_timeout=3)
     except Exception:
         # Fallback to in-memory / local sqlite for fast unit testing when Postgres server is offline
         import sqlite3
