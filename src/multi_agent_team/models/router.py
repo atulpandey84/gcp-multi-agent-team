@@ -22,14 +22,40 @@ def _load_active_models() -> dict:
     return data.get("models", {})
 
 
+def fetch_ollama_tags(url: str) -> list[str]:
+    """Fetch installed models on a target Ollama host."""
+    try:
+        req = urllib.request.Request(f"{url}/api/tags", headers={'User-Agent': 'MultiAgent/1.0'})
+        with urllib.request.urlopen(req, timeout=3) as resp:
+            if resp.status == 200:
+                body = json.loads(resp.read().decode('utf-8'))
+                models = body.get("models", [])
+                return [m.get("name", "") for m in models if isinstance(m, dict)]
+    except Exception:
+        pass
+    return []
+
+
+def trigger_ollama_pull(url: str, model_name: str) -> bool:
+    """Attempt auto-download of requested missing model on target host."""
+    try:
+        data = json.dumps({"name": model_name, "stream": False}).encode("utf-8")
+        req = urllib.request.Request(f"{url}/api/pull", data=data, headers={"Content-Type": "application/json", "User-Agent": "MultiAgent/1.0"})
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            return resp.status == 200
+    except Exception as exc:
+        logger.warning(f"Auto-download model {model_name} failed on host {url}: {exc}")
+        return False
+
+
 def select_best_ollama_instance() -> dict:
     """Evaluate local and remote Ollama instances based on latency, responsiveness, and GPU/CPU resource load."""
     local_url = os.getenv("OLLAMA_LOCAL_URL", "http://192.168.31.135:11434").rstrip("/")
     remote_url = os.getenv("OLLAMA_REMOTE_URL", "http://192.168.31.63:11434").rstrip("/")
 
     candidates = [
-        {"url": local_url, "label": f"Local GPU/CPU ({local_url.replace('http://', '')})", "is_gpu": True, "score": 0},
-        {"url": remote_url, "label": f"Remote CPU ({remote_url.replace('http://', '')})", "is_gpu": False, "score": 0}
+        {"url": local_url, "label": f"Local GPU/CPU ({local_url.replace('http://', '')})", "is_gpu": True, "score": 0, "available_models": []},
+        {"url": remote_url, "label": f"Remote CPU ({remote_url.replace('http://', '')})", "is_gpu": False, "score": 0, "available_models": []}
     ]
 
     best = None
@@ -38,23 +64,22 @@ def select_best_ollama_instance() -> dict:
     for cand in candidates:
         try:
             start = time.time()
-            req = urllib.request.Request(f"{cand['url']}/api/tags", headers={'User-Agent': 'MultiAgent/1.0'})
-            with urllib.request.urlopen(req, timeout=3) as resp:
-                elapsed = time.time() - start
-                if resp.status == 200:
-                    score = 100 - (elapsed * 20)
-                    if cand["is_gpu"]:
-                        score += 30  # Prefer GPU instance for speed
-                    cand["score"] = score
-                    if score > best_score:
-                        best_score = score
-                        best = cand
+            models = fetch_ollama_tags(cand["url"])
+            elapsed = time.time() - start
+            cand["available_models"] = models
+            score = 100 - (elapsed * 20)
+            if cand["is_gpu"]:
+                score += 30  # Prefer GPU instance for speed
+            cand["score"] = score
+            if score > best_score:
+                best_score = score
+                best = cand
         except Exception:
             continue
 
     if best:
         return best
-    return {"url": local_url, "label": f"Fallback Local ({local_url})", "is_gpu": True, "score": 0}
+    return {"url": local_url, "label": f"Fallback Local ({local_url})", "is_gpu": True, "score": 0, "available_models": []}
 
 
 class SmartFallbackModel:
@@ -66,27 +91,60 @@ class SmartFallbackModel:
         self.policy_cfg = policy_cfg
 
     def invoke(self, prompt: str):
+        nvidia_err = None
         try:
             if not os.getenv("NVIDIA_API_KEY"):
-                raise RuntimeError("NVIDIA_API_KEY is not configured")
+                raise RuntimeError("NVIDIA_API_KEY environment variable is missing or empty")
             res = self.nvidia_model.invoke(prompt)
-            # Annotate response with provider metadata
             if hasattr(res, "response_metadata"):
                 res.response_metadata["model_provider"] = "NVIDIA NIM Cloud"
                 res.response_metadata["model_name"] = self.policy_cfg.get("model")
                 res.response_metadata["model_location"] = "NVIDIA Cloud Endpoints"
             return res
         except Exception as exc:
+            nvidia_err = str(exc)
             logger.warning(f"NVIDIA API failed for policy {self.policy}: {exc}. Routing to Ollama fallback...")
-            ollama_inst = select_best_ollama_instance()
-            model_name = self.policy_cfg.get("ollama_model", "llama3")
-            ollama_model = ChatOllama(base_url=ollama_inst["url"], model=model_name, temperature=self.policy_cfg.get("temperature", 0.1))
+
+        ollama_inst = select_best_ollama_instance()
+        target_url = ollama_inst["url"]
+        requested_model = self.policy_cfg.get("ollama_model", "llama3")
+        available_models = ollama_inst.get("available_models") or fetch_ollama_tags(target_url)
+
+        # 1. Check if model is already installed
+        chosen_model = None
+        if any(requested_model in m for m in available_models):
+            chosen_model = requested_model
+        else:
+            # 2. Attempt auto-pull model on missing system host
+            logger.info(f"Model '{requested_model}' missing on host {target_url}. Attempting auto-download...")
+            pulled = trigger_ollama_pull(target_url, requested_model)
+            if pulled:
+                chosen_model = requested_model
+            elif available_models:
+                # 3. Select alternate installed model on target host
+                chosen_model = available_models[0].split(":")[0]
+                logger.info(f"Auto-pull failed. Selected alternate model '{chosen_model}' installed on host {target_url}.")
+
+        if not chosen_model:
+            raise RuntimeError(
+                f"Model Provider Failure: NVIDIA API Error ({nvidia_err}). "
+                f"System Host '{target_url}' is missing requested model '{requested_model}' "
+                f"and auto-download failed with no available alternate models installed."
+            )
+
+        try:
+            ollama_model = ChatOllama(base_url=target_url, model=chosen_model, temperature=self.policy_cfg.get("temperature", 0.1))
             res = ollama_model.invoke(prompt)
             if hasattr(res, "response_metadata"):
-                res.response_metadata["model_provider"] = "Ollama Local/Remote"
-                res.response_metadata["model_name"] = model_name
+                res.response_metadata["model_provider"] = f"Ollama ({chosen_model})"
+                res.response_metadata["model_name"] = chosen_model
                 res.response_metadata["model_location"] = ollama_inst["label"]
             return res
+        except Exception as ollama_exc:
+            raise RuntimeError(
+                f"Model Provider Failure: NVIDIA Cloud ({nvidia_err}) and "
+                f"System Host '{target_url}' ({chosen_model}) failed: {ollama_exc}"
+            )
 
 
 def get_model(policy: str):

@@ -58,7 +58,7 @@ function openAgentModal(agentId) {
       <div class="trace-item"><b>[Agent Persona]</b> ${escapeHtml(agent.role)} (${escapeHtml(agent.team)})</div>
       <div class="trace-item"><b>[Model & Host Location]</b> <span class="badge model-badge">${locText}</span></div>
       <div class="trace-item"><b>[Task Objective]</b> ${escapeHtml(task.title)}</div>
-      <div class="trace-item"><b>[Reasoning Status]</b> ${task.status === 'completed' ? '✓ Reasoning & output generation complete (100%)' : (task.status === 'failed' ? '❌ Task execution failed' : '⚙ Active reasoning & decomposition in progress...')}</div>
+      <div class="trace-item"><b>[Live Dynamic Reasoning Status]</b> <b>${escapeHtml(task.reasoning_status || 'In Progress')}</b></div>
       ${task.failure_reason ? `
         <div class="failure-callout">
           <div class="fail-title">⚠️ Task Failure Reason</div>
@@ -74,9 +74,15 @@ function openAgentModal(agentId) {
 
   const artifactBox = document.getElementById('modalOutputArtifact');
   if (task?.output_artifact || task?.document_content) {
+    const docPath = task.output_artifact ? `/${task.output_artifact}` : '#';
     artifactBox.innerHTML = `
       ${task.document_title ? `<div style="font-weight:700; margin-bottom:0.4rem;">${escapeHtml(task.document_title)}</div>` : ''}
       <div class="approval-doc-box">${escapeHtml(task.document_content || 'Artifact saved: ' + task.output_artifact)}</div>
+
+      <div style="margin-bottom:0.75rem;">
+        <a href="${docPath}" target="_blank" class="task-doc-link">📄 View / Download Complete Document Artifact</a>
+      </div>
+
       ${task.status === 'awaiting_approval' ? `
         <div class="approval-card">
           <div class="approval-head">
@@ -86,7 +92,7 @@ function openAgentModal(agentId) {
           <div class="approval-actions">
             <input id="modalFeedbackInput" class="feedback-input" placeholder="Feedback or rejection reason..." />
             <button onclick="approveTask('${task.id}')" class="btn-task-approve">Approve & Proceed</button>
-            <button onclick="rejectTask('${task.id}')" class="btn-task-reject">Reject with Feedback</button>
+            <button onclick="rejectTask('${task.id}')" class="btn-task-redo">Redo (Reject with Feedback)</button>
           </div>
         </div>
       ` : ''}
@@ -237,6 +243,23 @@ function renderAgents() {
       const task = taskMap[agent.id];
       const status = task?.status === 'running' ? 'working' : (task?.status || agent.status || 'idle');
       const hostLabel = task?.model_location ? (task.model_location.includes('NVIDIA') ? 'NVIDIA Cloud' : task.model_location) : 'NVIDIA Cloud';
+
+      let barColor = 'grey';
+      let progressVal = 0;
+      let reasonText = 'Queued';
+
+      if (task) {
+        progressVal = task.progress || 0;
+        reasonText = task.reasoning_status || (task.status === 'completed' ? 'Completed & Validated' : 'In Progress');
+        if (task.status === 'completed') {
+          barColor = 'green';
+        } else if (task.status === 'failed') {
+          barColor = 'red';
+        } else if (task.status === 'running' || task.status === 'awaiting_approval' || progressVal > 0) {
+          barColor = 'amber';
+        }
+      }
+
       return `<article class="agent-card ${status}" onclick="openAgentModal('${agent.id}')">
         <div class="agent-top">
           <span class="avatar">${escapeHtml(agent.role?.slice(0, 2).toUpperCase())}</span>
@@ -247,9 +270,12 @@ function renderAgents() {
         ${task ? `
           <div class="task-label">
             <span class="badge model-badge">${escapeHtml(task.model_policy)} @ ${escapeHtml(hostLabel)}</span>
-            <b>${task.progress}%</b>
+            <b>${progressVal}%</b>
           </div>
-          <div class="bar"><i style="width:${task.progress}%"></i></div>
+          <div class="bar-container">
+            <div class="bar-fill ${barColor}" style="width:${Math.max(progressVal, 5)}%"></div>
+            <div class="bar-overlay-text">${escapeHtml(reasonText)}</div>
+          </div>
           ${task.output_summary ? `<div class="output-snippet">✓ ${escapeHtml(task.output_summary)}</div>` : ''}
         ` : '<div class="idle-line">Standing by - Click to drill down</div>'}
       </article>`;
@@ -323,6 +349,22 @@ function renderRun() {
   if (!currentRun) return;
   document.getElementById('runProgress').textContent = `${currentRun.progress}%`;
   document.getElementById('runStatus').textContent = currentRun.status;
+
+  const approveBtn = document.getElementById('approveExecutionBtn');
+  if (approveBtn) {
+    if (currentRun.status === 'running' || currentRun.status === 'paused_awaiting_approval' || currentRun.progress > 0) {
+      approveBtn.disabled = true;
+      approveBtn.style.opacity = '0.5';
+      approveBtn.style.cursor = 'not-allowed';
+      approveBtn.textContent = 'Execution In Progress';
+    } else {
+      approveBtn.disabled = false;
+      approveBtn.style.opacity = '1';
+      approveBtn.style.cursor = 'pointer';
+      approveBtn.textContent = 'Approve & Initiate Engineering Execution';
+    }
+  }
+
   renderAgents();
   renderCollaboration();
   renderFlowDiagram();

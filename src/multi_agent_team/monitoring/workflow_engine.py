@@ -46,6 +46,7 @@ class WorkflowTask:
     document_content: str | None = None
     review_requested: bool = False
     feedback_history: list[dict[str, Any]] = field(default_factory=list)
+    reasoning_status: str = "Queued"
     error: str | None = None
     failure_reason: str | None = None
     suggested_resolution: str | None = None
@@ -372,10 +373,16 @@ class WorkflowRuntime:
                 run.current_task_id = task.id
                 run.status = "running"
                 task.status = "running"
+                task.progress = 25
+                task.reasoning_status = "Analyzing Objective & Prior Evidence..."
                 task.started_at = task.started_at or datetime.now(timezone.utc).isoformat()
                 self._emit(run, "task_started", {"task_id": task.id, "agent_id": task.agent_id})
 
                 try:
+                    task.progress = 50
+                    task.reasoning_status = "Generating Document Deliverable & Technical Artifacts..."
+                    self._emit(run, "task_reasoning", {"task_id": task.id, "reasoning_status": task.reasoning_status})
+
                     result = self._agent_executor(
                         task.agent_id,
                         task.title,
@@ -406,6 +413,8 @@ class WorkflowRuntime:
 
                     if not run.auto_approve:
                         task.status = "awaiting_approval"
+                        task.progress = 75
+                        task.reasoning_status = "Awaiting Review & Approval"
                         run.status = "paused_awaiting_approval"
                         self._emit(run, "task_awaiting_approval", {
                             "task_id": task.id,
@@ -419,12 +428,15 @@ class WorkflowRuntime:
 
                         if task.status == "queued":
                             # Retrigger step due to negative feedback
+                            task.progress = 0
+                            task.reasoning_status = "Retriggering with Reviewer Feedback..."
                             self._emit(run, "task_retriggered", {"task_id": task.id, "feedback_count": len(task.feedback_history)})
                             continue
 
                     # Approved / Completed step
                     task.progress = 100
                     task.status = "completed"
+                    task.reasoning_status = "Completed & Validated"
                     task.completed_at = datetime.now(timezone.utc).isoformat()
                     evidence.append({"task_id": task.id, "agent_id": task.agent_id, "artifact": artifact, "result": result})
                     index += 1
@@ -435,6 +447,7 @@ class WorkflowRuntime:
                     task.status = "failed"
                     task.error = str(exc)
                     err_msg = str(exc)
+                    task.reasoning_status = f"Failed: {err_msg[:60]}"
                     if "NVIDIA_API_KEY" in err_msg:
                         task.failure_reason = "Missing NVIDIA_API_KEY environment variable for model provider"
                         task.suggested_resolution = "Configure NVIDIA_API_KEY in environment or .env file"
