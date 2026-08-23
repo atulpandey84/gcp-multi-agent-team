@@ -73,13 +73,61 @@ function openAgentModal(agentId) {
   }
 
   const artifactBox = document.getElementById('modalOutputArtifact');
-  if (task?.output_artifact) {
-    artifactBox.innerHTML = `<code>${escapeHtml(task.output_artifact)}</code>`;
+  if (task?.output_artifact || task?.document_content) {
+    artifactBox.innerHTML = `
+      ${task.document_title ? `<div style="font-weight:700; margin-bottom:0.4rem;">${escapeHtml(task.document_title)}</div>` : ''}
+      <div class="approval-doc-box">${escapeHtml(task.document_content || 'Artifact saved: ' + task.output_artifact)}</div>
+      ${task.status === 'awaiting_approval' ? `
+        <div class="approval-card">
+          <div class="approval-head">
+            <span class="approval-title">✋ Formal Document Review & Approval Required</span>
+            <span class="badge warning">AWAITING APPROVAL</span>
+          </div>
+          <div class="approval-actions">
+            <input id="modalFeedbackInput" class="feedback-input" placeholder="Feedback or rejection reason..." />
+            <button onclick="approveTask('${task.id}')" class="btn-task-approve">Approve & Proceed</button>
+            <button onclick="rejectTask('${task.id}')" class="btn-task-reject">Reject with Feedback</button>
+          </div>
+        </div>
+      ` : ''}
+    `;
   } else {
     artifactBox.innerHTML = '<span class="muted">No output artifact generated for this step yet.</span>';
   }
 
   document.getElementById('agentDetailModal').classList.remove('hidden');
+}
+
+async function approveTask(taskId) {
+  if (!currentRun) return;
+  try {
+    await api(`/api/workflows/${currentRun.id}/tasks/${taskId}/approve`, { method: 'POST' });
+    closeAgentModal();
+    await loadData();
+  } catch (err) {
+    alert(`Could not approve task: ${err.message}`);
+  }
+}
+
+async function rejectTask(taskId) {
+  if (!currentRun) return;
+  const inputEl = document.getElementById('modalFeedbackInput');
+  const feedback = inputEl ? inputEl.value.trim() : '';
+  if (!feedback) {
+    alert('Please enter a feedback comment / rejection reason before rejecting.');
+    return;
+  }
+  try {
+    await api(`/api/workflows/${currentRun.id}/tasks/${taskId}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({ comment: feedback }),
+      headers: { 'Content-Type': 'application/json' }
+    });
+    closeAgentModal();
+    await loadData();
+  } catch (err) {
+    alert(`Could not reject task: ${err.message}`);
+  }
 }
 
 function closeAgentModal() {
@@ -397,6 +445,38 @@ async function stopTasksAndReset() {
   }
 }
 
+async function continueWorkflow() {
+  if (!currentRun) return;
+  const chatHistory = document.getElementById('chatHistory');
+  try {
+    await api(`/api/workflows/${currentRun.id}/continue`, { method: 'POST' });
+    const msg = document.createElement('div');
+    msg.className = 'chat-msg system';
+    msg.innerHTML = `<div class="chat-role">WORKFLOW CONTROL</div><div class="chat-text">Continuing execution from the last pending step for Run ID <code>${escapeHtml(currentRun.id)}</code>...</div>`;
+    chatHistory.appendChild(msg);
+    chatHistory.scrollTop = chatHistory.scrollHeight;
+    await loadData();
+  } catch (err) {
+    alert(`Could not continue workflow: ${err.message}`);
+  }
+}
+
+async function startFreshWorkflow() {
+  if (!currentRun) return;
+  const chatHistory = document.getElementById('chatHistory');
+  try {
+    await api(`/api/workflows/${currentRun.id}/start_fresh`, { method: 'POST' });
+    const msg = document.createElement('div');
+    msg.className = 'chat-msg system';
+    msg.innerHTML = `<div class="chat-role">WORKFLOW CONTROL</div><div class="chat-text">Started fresh execution from Step 1 for Run ID <code>${escapeHtml(currentRun.id)}</code>...</div>`;
+    chatHistory.appendChild(msg);
+    chatHistory.scrollTop = chatHistory.scrollHeight;
+    await loadData();
+  } catch (err) {
+    alert(`Could not start fresh workflow: ${err.message}`);
+  }
+}
+
 async function approveAndInitiateExecution() {
   const chatHistory = document.getElementById('chatHistory');
 
@@ -432,6 +512,10 @@ const connBtn = document.getElementById('connectBtn');
 if (connBtn) connBtn.addEventListener('click', connect);
 document.getElementById('sendChatBtn').addEventListener('click', handleChatInput);
 document.getElementById('approveExecutionBtn').addEventListener('click', approveAndInitiateExecution);
+const continueBtn = document.getElementById('continueRunBtn');
+if (continueBtn) continueBtn.addEventListener('click', continueWorkflow);
+const freshBtn = document.getElementById('startFreshBtn');
+if (freshBtn) freshBtn.addEventListener('click', startFreshWorkflow);
 document.getElementById('stopResetBtn').addEventListener('click', stopTasksAndReset);
 document.getElementById('closeModalBtn').addEventListener('click', closeAgentModal);
 document.getElementById('chatInput').addEventListener('keydown', e => {

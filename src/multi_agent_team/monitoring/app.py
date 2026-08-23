@@ -112,7 +112,8 @@ async def create_workflow(payload: dict, dep=Depends(require_role(['operator', '
     objective = (payload.get("objective") or "").strip()
     if not objective:
         raise HTTPException(status_code=400, detail="objective required")
-    run = workflow_runtime.create_run(objective, provision=bool(payload.get("provision", False)))
+    auto_approve = bool(payload.get("auto_approve", False))
+    run = workflow_runtime.create_run(objective, provision=bool(payload.get("provision", False)), auto_approve=auto_approve)
     await workflow_runtime.start_run(run["id"])
     return run
 
@@ -137,6 +138,39 @@ async def stop_workflow(run_id: str, dep=Depends(require_role(['operator', 'admi
     if not ok:
         raise HTTPException(status_code=404, detail="workflow run not found")
     return {"ok": True, "run_id": run_id}
+
+
+@app.post("/api/workflows/{run_id}/tasks/{task_id}/approve")
+async def approve_workflow_task(run_id: str, task_id: str, dep=Depends(require_role(['operator', 'admin']))):
+    ok = await workflow_runtime.approve_task(run_id, task_id, approver=dep.get('role', 'operator'))
+    if not ok:
+        raise HTTPException(status_code=400, detail="task not awaiting approval or workflow not found")
+    return {"ok": True, "run_id": run_id, "task_id": task_id}
+
+
+@app.post("/api/workflows/{run_id}/start_fresh")
+async def start_fresh_workflow(run_id: str, dep=Depends(require_role(['operator', 'admin']))):
+    ok = await workflow_runtime.start_fresh_run(run_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="workflow run not found")
+    return {"ok": True, "run_id": run_id, "action": "started_fresh"}
+
+
+@app.post("/api/workflows/{run_id}/continue")
+async def continue_workflow(run_id: str, dep=Depends(require_role(['operator', 'admin']))):
+    ok = await workflow_runtime.continue_run(run_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="workflow run not found")
+    return {"ok": True, "run_id": run_id, "action": "continued"}
+
+
+@app.post("/api/workflows/{run_id}/tasks/{task_id}/reject")
+async def reject_workflow_task(run_id: str, task_id: str, payload: dict, dep=Depends(require_role(['operator', 'admin']))):
+    comment = payload.get("comment") or payload.get("feedback") or "Feedback provided: requirements update needed."
+    ok = await workflow_runtime.reject_task(run_id, task_id, comment=comment, rejector=dep.get('role', 'operator'))
+    if not ok:
+        raise HTTPException(status_code=400, detail="task not awaiting approval or workflow not found")
+    return {"ok": True, "run_id": run_id, "task_id": task_id}
 
 
 @app.post("/api/agents/{agent_id}/start")
