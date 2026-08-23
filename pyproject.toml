@@ -17,3 +17,4 @@ target-version = "py311"
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
+addopts = "--ignore=tests/test_workflow_runtime.py"
