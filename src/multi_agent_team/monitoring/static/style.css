@@ -32,8 +32,24 @@ button:hover { opacity: 0.9; }
 .btn-approve { background: var(--accent); color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 700; cursor: pointer; }
 .btn-approve:hover { background: #059669; }
 
+.btn-continue { background: #0284c7; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 700; cursor: pointer; }
+.btn-continue:hover { background: #0369a1; }
+
+.btn-fresh { background: #8b5cf6; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 700; cursor: pointer; }
+.btn-fresh:hover { background: #7c3aed; }
+
 .btn-stop { background: #ef4444; color: #ffffff; border: none; padding: 0.5rem 1rem; font-weight: 700; border-radius: 6px; cursor: pointer; transition: background 0.2s; font-size: 0.85rem; }
 .btn-stop:hover { background: #dc2626; }
+
+.approval-card { background: #fffbeb; border: 2px solid #f59e0b; border-radius: 8px; padding: 1rem; margin-top: 0.75rem; }
+.approval-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+.approval-title { font-weight: 700; color: #b45309; font-size: 0.9rem; }
+.approval-doc-box { background: #ffffff; border: 1px solid #fcd34d; border-radius: 6px; padding: 0.75rem; max-height: 250px; overflow-y: auto; font-family: var(--sans); font-size: 0.85rem; margin-bottom: 0.75rem; white-space: pre-wrap; }
+.approval-actions { display: flex; gap: 0.5rem; align-items: center; }
+.feedback-input { flex: 1; padding: 0.4rem 0.6rem; border: 1px solid #fcd34d; border-radius: 6px; font-family: var(--sans); font-size: 0.85rem; }
+.btn-task-approve { background: #10b981; color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 6px; font-weight: 700; cursor: pointer; }
+.btn-task-reject { background: #ef4444; color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 6px; font-weight: 700; cursor: pointer; }
+.feedback-history-list { font-family: var(--mono); font-size: 0.75rem; color: #991b1b; background: #fee2e2; border-radius: 4px; padding: 0.5rem; margin-bottom: 0.5rem; }
 
 .log-console { background: #090d16; border: 1px solid #1f293d; border-radius: 6px; padding: 0.75rem; max-height: 200px; overflow-y: auto; font-family: 'DM Mono', monospace; font-size: 0.8rem; color: #94a3b8; margin-bottom: 1rem; }
 .log-entry { margin-bottom: 0.35rem; line-height: 1.4; word-break: break-all; }
