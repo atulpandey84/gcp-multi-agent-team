@@ -44,6 +44,9 @@ class WorkflowTask:
     error: str | None = None
     failure_reason: str | None = None
     suggested_resolution: str | None = None
+    executed_model: str | None = None
+    model_provider: str | None = None
+    model_location: str | None = None
 
 @dataclass
 class WorkflowRun:
@@ -108,7 +111,17 @@ def invoke_specialist(agent_id: str, title: str, objective: str, context: dict[s
     model = get_model(context["model_policy"])
     prompt = {"objective": objective, "assignment": title, "agent": agent_id, "mission": contract["mission"], "responsibilities": contract["responsibilities"], "constraints": contract["security_constraints"], "prior_evidence": context.get("evidence", []), "instruction": "Return assumptions, decisions, risks, evidence, and validation. Do not claim execution without evidence."}
     response = model.invoke(json.dumps(prompt))
-    return {"agent_id": agent_id, "assignment": title, "result": getattr(response, "content", response), "validated": True}
+
+    metadata = getattr(response, "response_metadata", {}) or {}
+    return {
+        "agent_id": agent_id,
+        "assignment": title,
+        "result": getattr(response, "content", response),
+        "validated": True,
+        "model_name": metadata.get("model_name"),
+        "model_provider": metadata.get("model_provider", "NVIDIA NIM Cloud"),
+        "model_location": metadata.get("model_location", "NVIDIA Cloud Endpoints")
+    }
 
 def validate_terraform(terraform_root: Path) -> dict[str, Any]:
     if not terraform_root.exists() or not list(terraform_root.rglob("*.tf")):
@@ -217,6 +230,9 @@ class WorkflowRuntime:
                     if task.agent_id == "cloud_infrastructure_engineer":
                         terraform_root = _materialize_terraform(run, result)
                     task.output_artifact = artifact
+                    task.executed_model = result.get("model_name")
+                    task.model_provider = result.get("model_provider", "NVIDIA NIM Cloud")
+                    task.model_location = result.get("model_location", "NVIDIA Cloud Endpoints")
                     evidence.append({"task_id": task.id, "agent_id": task.agent_id, "artifact": artifact, "result": result})
                     task.progress = 100
                     task.status = "completed"

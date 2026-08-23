@@ -53,9 +53,10 @@ function openAgentModal(agentId) {
 
   const traceBox = document.getElementById('modalThinkingTrace');
   if (task) {
+    const locText = task.model_location ? `${escapeHtml(task.executed_model || task.model_policy)} (${escapeHtml(task.model_provider || 'NVIDIA')} @ ${escapeHtml(task.model_location)})` : `${escapeHtml(task.model_policy)} (NVIDIA NIM Cloud)`;
     traceBox.innerHTML = `
       <div class="trace-item"><b>[Agent Persona]</b> ${escapeHtml(agent.role)} (${escapeHtml(agent.team)})</div>
-      <div class="trace-item"><b>[Model Policy]</b> Using ${escapeHtml(task.model_policy)} model tier for reasoning</div>
+      <div class="trace-item"><b>[Model & Host Location]</b> <span class="badge model-badge">${locText}</span></div>
       <div class="trace-item"><b>[Task Objective]</b> ${escapeHtml(task.title)}</div>
       <div class="trace-item"><b>[Reasoning Status]</b> ${task.status === 'completed' ? '✓ Reasoning & output generation complete (100%)' : (task.status === 'failed' ? '❌ Task execution failed' : '⚙ Active reasoning & decomposition in progress...')}</div>
       ${task.failure_reason ? `
@@ -187,6 +188,7 @@ function renderAgents() {
     const cardsHtml = teamAgents.map(agent => {
       const task = taskMap[agent.id];
       const status = task?.status === 'running' ? 'working' : (task?.status || agent.status || 'idle');
+      const hostLabel = task?.model_location ? (task.model_location.includes('NVIDIA') ? 'NVIDIA Cloud' : task.model_location) : 'NVIDIA Cloud';
       return `<article class="agent-card ${status}" onclick="openAgentModal('${agent.id}')">
         <div class="agent-top">
           <span class="avatar">${escapeHtml(agent.role?.slice(0, 2).toUpperCase())}</span>
@@ -196,7 +198,7 @@ function renderAgents() {
         <p class="mission">${escapeHtml(task?.title || agent.mission)}</p>
         ${task ? `
           <div class="task-label">
-            <span class="badge model-badge">${escapeHtml(task.model_policy)}</span>
+            <span class="badge model-badge">${escapeHtml(task.model_policy)} @ ${escapeHtml(hostLabel)}</span>
             <b>${task.progress}%</b>
           </div>
           <div class="bar"><i style="width:${task.progress}%"></i></div>
