@@ -8,9 +8,18 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     port: int = 8000
     allowed_origins: list[str] = ["*"]
+    max_agents: int = 22
+    model_timeout: int = 120
+    jwt_secret: str | None = None
 
-    # Environment variables should be prefixed with MONITORING_.
-    # Example: MONITORING_API_KEY
-
+    @classmethod
+    def validate_settings(cls, s: "Settings") -> dict[str, bool]:
+        """Validate core runtime settings."""
+        return {
+            "valid_port": 1 <= s.port <= 65535,
+            "valid_agents": s.max_agents > 0,
+            "valid_timeout": s.model_timeout > 0,
+            "has_api_key": bool(s.api_key)
+        }
 
 settings = Settings()

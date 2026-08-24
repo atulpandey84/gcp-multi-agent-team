@@ -12,6 +12,7 @@ from .db import init_db, create_approval, list_pending_approvals, set_approval_d
 from ..agents.contracts import get_agent_contract
 from .registry import AgentRegistry
 from .workflow_engine import WorkflowRuntime
+from .validation import validate_user_input
 from pathlib import Path
 
 ROOT = Path(__file__).parent
@@ -110,7 +111,8 @@ def list_workflows(dep=Depends(require_auth)):
 @app.post("/api/chat")
 async def dynamic_executive_chat(payload: dict, dep=Depends(require_auth)):
     messages = payload.get("messages") or []
-    user_message = (payload.get("message") or "").strip()
+    raw_message = payload.get("message")
+    user_message = validate_user_input(raw_message, field_name="Chat message", min_len=1, max_len=2000) if raw_message is not None else ""
     if not user_message and not messages:
         raise HTTPException(status_code=400, detail="message or messages required")
 
@@ -165,9 +167,7 @@ async def dynamic_executive_chat(payload: dict, dep=Depends(require_auth)):
 
 @app.post("/api/workflows")
 async def create_workflow(payload: dict, dep=Depends(require_role(['operator', 'admin']))):
-    objective = (payload.get("objective") or "").strip()
-    if not objective:
-        raise HTTPException(status_code=400, detail="objective required")
+    objective = validate_user_input(payload.get("objective"), field_name="Workflow objective", min_len=1, max_len=2000)
     auto_approve = bool(payload.get("auto_approve", False))
     run = workflow_runtime.create_run(objective, provision=bool(payload.get("provision", False)), auto_approve=auto_approve)
     await workflow_runtime.start_run(run["id"])
@@ -222,7 +222,8 @@ async def continue_workflow(run_id: str, dep=Depends(require_role(['operator', '
 
 @app.post("/api/workflows/{run_id}/tasks/{task_id}/reject")
 async def reject_workflow_task(run_id: str, task_id: str, payload: dict, dep=Depends(require_role(['operator', 'admin']))):
-    comment = payload.get("comment") or payload.get("feedback") or "Feedback provided: requirements update needed."
+    raw_comment = payload.get("comment") or payload.get("feedback") or "Feedback provided: requirements update needed."
+    comment = validate_user_input(raw_comment, field_name="Feedback comment", min_len=1, max_len=2000)
     ok = await workflow_runtime.reject_task(run_id, task_id, comment=comment, rejector=dep.get('role', 'operator'))
     if not ok:
         raise HTTPException(status_code=400, detail="task not awaiting approval or workflow not found")
