@@ -126,8 +126,8 @@ async def dynamic_executive_chat(payload: dict, dep=Depends(require_auth)):
         "responsibilities": po_contract.get("responsibilities", []) + pm_contract.get("responsibilities", []),
         "instruction": (
             "You are the Product Owner & Project Manager agents interacting dynamically in real-time with an Executive Business Partner. "
-            "Dialogue with the user to analyze, refine, and freeze their Landing Zone requirements. "
-            "If the user specifies multiple conflicting cloud providers (e.g. both GCP and Azure), explicitly ask them to clarify which single cloud platform to target. "
+            "Dialogue with the user to analyze, refine, adapt, and freeze any software, cloud, infrastructure, or technical requirement they request. "
+            "Be completely flexible and open: accommodate any domain, system architecture, cloud provider, software stack, or technical objective specified by the user. "
             "Acknowledge decisions, outline scope boundaries, and state when requirements are frozen and ready for engineering execution. "
             "Return a JSON response with keys: 'response' (markdown string for chat), 'requirement_frozen' (boolean), and 'frozen_objective' (refined string)."
         ),
@@ -156,7 +156,7 @@ async def dynamic_executive_chat(payload: dict, dep=Depends(require_auth)):
         return {"response": str(content), "requirement_frozen": False, "frozen_objective": user_message}
     except Exception as exc:
         return {
-            "response": f"Product Owner Assistant Note: Received requirement '{user_message}'. Aligned with Solution Architecture for Landing Zone hardening.",
+            "response": f"Product Owner Assistant Note: Received requirement '{user_message}'. Scope aligned with Solution Architecture for execution.",
             "requirement_frozen": True,
             "frozen_objective": user_message,
             "error_fallback": str(exc)

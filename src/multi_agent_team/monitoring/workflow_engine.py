@@ -17,7 +17,7 @@ PILOT_STAGES = [
     ("project_manager", "Plan delivery and dependencies", "fast_agent"),
     ("engineering_orchestrator", "Decompose the engineering workflow", "architecture_critical"),
     ("solution_architect", "Design the application solution", "architecture_critical"),
-    ("platform_architect", "Assess Landing Zone fit", "architecture_critical"),
+    ("platform_architect", "Assess solution architecture fit", "architecture_critical"),
     ("security_architect", "Review threats and controls", "senior_reasoning"),
     ("finops_engineer", "Assess cost and budget impact", "fast_agent"),
     ("devops_lead", "Define delivery automation", "senior_reasoning"),
@@ -131,7 +131,7 @@ def invoke_specialist(agent_id: str, title: str, objective: str, context: dict[s
         doc_name = "Detailed Solution Architecture & Security Design Specification Document"
         role_instruction = (
             "You are a Solution / System Architect persona. Produce a Detailed Architectural & Security Design Spec. "
-            "Include target component diagrams/structures, security boundaries, Landing Zone governance alignment, "
+            "Include target component diagrams/structures, security boundaries, architectural governance alignment, "
             "interface specs, and threat mitigation design."
         )
     else:

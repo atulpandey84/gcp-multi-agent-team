@@ -2,7 +2,7 @@ let agents = [];
 let currentRun = null;
 let ws = null;
 let logs = [];
-let pendingRequirement = "I want a full fledged architecturally secure and hardened GCP landing zone";
+let pendingRequirement = "I want a secure microservices application environment";
 
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 
@@ -507,7 +507,7 @@ async function handleChatInput() {
     thinkingMsg.remove();
     const errMsg = document.createElement('div');
     errMsg.className = 'chat-msg ack';
-    errMsg.innerHTML = `<div class="chat-role">Product Owner & Project Manager Agents</div><div class="chat-text">Requirement processed: <b>${escapeHtml(reqText)}</b>. Scope aligned with Solution Architecture for Landing Zone hardening. Click <b>Approve & Initiate Engineering Execution</b> to proceed.</div>`;
+    errMsg.innerHTML = `<div class="chat-role">Product Owner & Project Manager Agents</div><div class="chat-text">Requirement processed: <b>${escapeHtml(reqText)}</b>. Scope aligned with Solution Architecture for execution. Click <b>Approve & Initiate Engineering Execution</b> to proceed.</div>`;
     chatHistory.appendChild(errMsg);
     pendingRequirement = reqText;
     saveChatHistory();
@@ -524,7 +524,7 @@ async function stopTasksAndReset() {
     stopMsg.innerHTML = `<div class="chat-role">SYSTEM CONTROL</div><div class="chat-text">Active multi-agent execution tasks stopped. Requirement session reset.</div>`;
     chatHistory.appendChild(stopMsg);
 
-    pendingRequirement = "I want a full fledged architecturally secure and hardened GCP landing zone";
+    pendingRequirement = "I want a secure microservices application environment";
     const inputEl = document.getElementById('chatInput');
     if (inputEl) inputEl.value = '';
 
