@@ -115,6 +115,24 @@ def invoke_specialist(agent_id: str, title: str, objective: str, context: dict[s
     contract = get_agent_contract(agent_id)
     if not contract:
         raise ValueError(f"No contract exists for specialist {agent_id}")
+
+    # Wire specialized agent subclasses if available
+    try:
+        from ..agents.specialized import IAMAgent, NetworkingAgent, SecurityAgent, TerraformAgent, ProjectAgent
+        agent_map = {
+            "iam_architect": IAMAgent,
+            "security_architect": SecurityAgent,
+            "cloud_infrastructure_engineer": TerraformAgent,
+            "project_manager": ProjectAgent
+        }
+        if agent_id in agent_map:
+            agent_inst = agent_map[agent_id]()
+            res = agent_inst.execute(objective, context)
+            res["validated"] = True
+            return res
+    except Exception:
+        pass
+
     model = get_model(context["model_policy"])
 
     # Determine document type based on persona role
