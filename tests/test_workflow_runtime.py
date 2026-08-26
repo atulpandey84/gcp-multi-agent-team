@@ -60,7 +60,7 @@ def test_workflow_blocks_on_terraform_gate_and_persists_failure(tmp_path, monkey
     async def execute():
         await runtime.start_run(run["id"])
         while runtime.get_run(run["id"])["status"] not in {"completed", "blocked", "failed", "cancelled"}:
-            await asyncio.sleep(0)
+            await asyncio.sleep(0.01)
 
     asyncio.run(execute())
     completed = runtime.get_run(run["id"])
@@ -78,7 +78,7 @@ def test_provisioning_requires_human_approval(monkeypatch):
     async def execute():
         await runtime.start_run(run["id"])
         while runtime.get_run(run["id"])["status"] not in {"completed", "blocked", "failed", "cancelled"}:
-            await asyncio.sleep(0)
+            await asyncio.sleep(0.01)
 
     asyncio.run(execute())
     completed = runtime.get_run(run["id"])
