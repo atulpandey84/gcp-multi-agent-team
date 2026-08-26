@@ -92,18 +92,25 @@ class SmartFallbackModel:
 
     def invoke(self, prompt: str):
         nvidia_err = None
-        try:
-            if not os.getenv("NVIDIA_API_KEY"):
-                raise RuntimeError("NVIDIA_API_KEY environment variable is missing or empty")
-            res = self.nvidia_model.invoke(prompt)
-            if hasattr(res, "response_metadata"):
-                res.response_metadata["model_provider"] = "NVIDIA NIM Cloud"
-                res.response_metadata["model_name"] = self.policy_cfg.get("model")
-                res.response_metadata["model_location"] = "NVIDIA Cloud Endpoints"
-            return res
-        except Exception as exc:
-            nvidia_err = str(exc)
-            logger.warning(f"NVIDIA API failed for policy {self.policy}: {exc}. Routing to Ollama fallback...")
+        max_retries = int(os.getenv("MODEL_MAX_RETRIES", "2"))
+
+        for attempt in range(max_retries):
+            try:
+                if not os.getenv("NVIDIA_API_KEY"):
+                    raise RuntimeError("NVIDIA_API_KEY environment variable is missing or empty")
+                res = self.nvidia_model.invoke(prompt)
+                if hasattr(res, "response_metadata"):
+                    res.response_metadata["model_provider"] = "NVIDIA NIM Cloud"
+                    res.response_metadata["model_name"] = self.policy_cfg.get("model")
+                    res.response_metadata["model_location"] = "NVIDIA Cloud Endpoints"
+                return res
+            except Exception as exc:
+                nvidia_err = str(exc)
+                logger.warning(f"NVIDIA API attempt {attempt + 1}/{max_retries} failed for policy {self.policy}: {exc}.")
+                if attempt < max_retries - 1:
+                    time.sleep(1.0 * (attempt + 1))
+
+        logger.warning(f"All NVIDIA API retries exhausted for policy {self.policy}. Routing to Ollama fallback...")
 
         ollama_inst = select_best_ollama_instance()
         target_url = ollama_inst["url"]
