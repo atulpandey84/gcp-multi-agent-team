@@ -6,8 +6,20 @@ import urllib.request
 import json
 import logging
 from dotenv import load_dotenv
-from langchain_nvidia_ai_endpoints import ChatNVIDIA
-from langchain_ollama import ChatOllama
+
+try:
+    from langchain_nvidia_ai_endpoints import ChatNVIDIA
+except ImportError:  # pragma: no cover - optional dependency for local/runtime environments
+    class ChatNVIDIA:  # type: ignore[override]
+        def __init__(self, *args, **kwargs):
+            raise RuntimeError("langchain_nvidia_ai_endpoints is not installed in this environment")
+
+try:
+    from langchain_ollama import ChatOllama
+except ImportError:  # pragma: no cover - optional dependency for local/runtime environments
+    class ChatOllama:  # type: ignore[override]
+        def __init__(self, *args, **kwargs):
+            raise RuntimeError("langchain_ollama is not installed in this environment")
 
 load_dotenv()
 ROOT = Path(__file__).resolve().parents[3]

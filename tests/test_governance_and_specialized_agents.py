@@ -1,5 +1,6 @@
 from multi_agent_team.policies.engine import validate_separation_of_duties, validate_quality_gates
 from multi_agent_team.agents.specialized import IAMAgent, SecurityAgent, TerraformAgent, NetworkingAgent, ProjectAgent
+from src.multi_agent_team.orchestration.engine import run_multi_agent_workflow
 
 def test_separation_of_duties_enforcement():
     # SoD violation when author attempts to self-approve high risk action
@@ -53,3 +54,16 @@ def test_specialized_agents_execution():
     proj_res = proj_agent.execute("Create Resource Hierarchy Plan", {})
     assert proj_res["status"] == "completed"
     assert "resource_hierarchy" in proj_res
+
+
+def test_orchestration_emits_evidence_artifacts_and_policy_decisions(tmp_path, monkeypatch):
+    monkeypatch.setattr("src.multi_agent_team.orchestration.engine._workflow_root", lambda: tmp_path)
+
+    result = run_multi_agent_workflow("Deploy a secure landing zone")
+
+    assert "evidence_artifacts" in result
+    assert "policy_decisions" in result
+    assert result["evidence_artifacts"]
+    assert result["policy_decisions"]
+    assert any(path.endswith(".json") for path in result["evidence_artifacts"])
+    assert any(decision["decision"] in {"approved", "blocked", "escalated"} for decision in result["policy_decisions"])

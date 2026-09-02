@@ -19,11 +19,27 @@ def _get_db_url() -> str:
     return f"postgresql://{user}:{password}@{host}:{port}/{db}"
 
 DATABASE_URL = _get_db_url()
+_USE_SQLITE = False
+
+
+def _sqlite_conn():
+    import sqlite3
+
+    d = Path("data")
+    d.mkdir(exist_ok=True)
+    conn = sqlite3.connect(d / "monitor.db")
+    cur = conn.cursor()
+    cur.execute("CREATE TABLE IF NOT EXISTS agents (id TEXT PRIMARY KEY, role TEXT, team TEXT, mission TEXT, status TEXT, last_seen TEXT)")
+    cur.execute("CREATE TABLE IF NOT EXISTS audit (id INTEGER PRIMARY KEY AUTOINCREMENT, timestamp TEXT, action TEXT, agent_id TEXT, details TEXT)")
+    cur.execute("CREATE TABLE IF NOT EXISTS approvals (id INTEGER PRIMARY KEY AUTOINCREMENT, timestamp TEXT, requester TEXT, action TEXT, agent_id TEXT, details TEXT, status TEXT, approver TEXT, approver_comments TEXT, decision_timestamp TEXT)")
+    conn.commit()
+    return conn
 
 
 def init_db() -> None:
+    global _USE_SQLITE
     try:
-        conn = psycopg.connect(DATABASE_URL, connect_timeout=3)
+        conn = psycopg.connect(DATABASE_URL, connect_timeout=float(os.environ.get("MONITORING_DB_CONNECT_TIMEOUT", "1")))
         cur = conn.cursor()
         cur.execute(
             """
@@ -67,24 +83,18 @@ def init_db() -> None:
         conn.commit()
         conn.close()
     except Exception as exc:
+        _USE_SQLITE = True
         print(f"[Warning] PostgreSQL init_db failed ({exc}). Ensure PostgreSQL is running at {DATABASE_URL}.")
 
 
 def _conn():
+    if _USE_SQLITE:
+        return _sqlite_conn()
     try:
-        return psycopg.connect(DATABASE_URL, connect_timeout=3)
+        return psycopg.connect(DATABASE_URL, connect_timeout=float(os.environ.get("MONITORING_DB_CONNECT_TIMEOUT", "1")))
     except Exception:
         # Fallback to in-memory / local sqlite for fast unit testing when Postgres server is offline
-        import sqlite3
-        d = Path("data")
-        d.mkdir(exist_ok=True)
-        conn = sqlite3.connect(d / "monitor.db")
-        cur = conn.cursor()
-        cur.execute("CREATE TABLE IF NOT EXISTS agents (id TEXT PRIMARY KEY, role TEXT, team TEXT, mission TEXT, status TEXT, last_seen TEXT)")
-        cur.execute("CREATE TABLE IF NOT EXISTS audit (id INTEGER PRIMARY KEY AUTOINCREMENT, timestamp TEXT, action TEXT, agent_id TEXT, details TEXT)")
-        cur.execute("CREATE TABLE IF NOT EXISTS approvals (id INTEGER PRIMARY KEY AUTOINCREMENT, timestamp TEXT, requester TEXT, action TEXT, agent_id TEXT, details TEXT, status TEXT, approver TEXT, approver_comments TEXT, decision_timestamp TEXT)")
-        conn.commit()
-        return conn
+        return _sqlite_conn()
 
 
 def _is_pg(conn):
