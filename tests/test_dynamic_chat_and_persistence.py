@@ -17,6 +17,42 @@ def test_dynamic_executive_chat_endpoint():
     data = res.json()
     assert "response" in data or "frozen_objective" in data
 
+
+def test_dynamic_chat_returns_terraform_bucket_script():
+    res = client.post(
+        "/api/chat",
+        json={"message": "Create a Terraform script to create a GCP bucket with any defaults"},
+        headers={"x-api-key": "dev-key"}
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert data["artifact_type"] == "terraform"
+    assert "resource \"google_storage_bucket\" \"app\"" in data["response"]
+    assert "hello_world.py" not in data["response"]
+
+
+def test_dynamic_chat_understands_attached_text_requirement():
+    res = client.post(
+        "/api/chat",
+        files={"requirement_file": ("requirements.txt", b"Create a private GCP bucket with 30 day retention.", "text/plain")},
+        data={"message": "Please review the attached requirements."},
+        headers={"x-api-key": "dev-key"}
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert "bucket" in data["response"].lower()
+    assert "retention" in data["response"].lower()
+
+
+def test_dynamic_chat_accepts_file_without_message():
+    res = client.post(
+        "/api/chat",
+        files={"requirement_file": ("requirements.txt", b"Create a private GCP bucket.", "text/plain")},
+        headers={"x-api-key": "dev-key"}
+    )
+    assert res.status_code == 200
+    assert "bucket" in res.json()["frozen_objective"].lower()
+
 def test_session_state_restoration():
     workflow_runtime.clear_runs()
     run = workflow_runtime.create_run("Build an AI chatbot microservice platform on AWS")

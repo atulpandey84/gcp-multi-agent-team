@@ -16,6 +16,9 @@ from .validation import validate_user_input
 from pathlib import Path
 
 ROOT = Path(__file__).parent
+REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
+DATA_ROOT = REPOSITORY_ROOT / "data"
+DATA_ROOT.mkdir(parents=True, exist_ok=True)
 
 app = FastAPI(title="Multi-Agent Monitoring")
 
@@ -28,6 +31,7 @@ app.add_middleware(
 )
 
 app.mount("/static", StaticFiles(directory=ROOT / "static"), name="static")
+app.mount("/data", StaticFiles(directory=DATA_ROOT), name="data")
 
 
 def require_api_key(x_api_key: str | None = None):
@@ -108,13 +112,116 @@ def list_workflows(dep=Depends(require_auth)):
     return workflow_runtime.list_runs()
 
 
+def _terraform_bucket_response(user_message: str) -> dict | None:
+        normalized = user_message.lower()
+        if "terraform" not in normalized or "bucket" not in normalized:
+                return None
+
+        bucket_name = "multi-agent-demo-bucket"
+        response = f"""Here is a safe starter Terraform configuration for a Google Cloud Storage bucket. Replace `{bucket_name}` with a globally unique name before applying it.
+
+```hcl
+terraform {{
+    required_providers {{
+        google = {{
+            source  = "hashicorp/google"
+            version = "~> 6.0"
+        }}
+    }}
+}}
+
+provider "google" {{
+    project = var.project_id
+    region  = var.region
+}}
+
+variable "project_id" {{
+    description = "GCP project that will own the bucket"
+    type        = string
+}}
+
+variable "region" {{
+    description = "GCP region for the bucket"
+    type        = string
+    default     = "us-central1"
+}}
+
+resource "google_storage_bucket" "app" {{
+    name                        = "{bucket_name}"
+    location                    = var.region
+    storage_class               = "STANDARD"
+    uniform_bucket_level_access = true
+
+    versioning {{
+        enabled = true
+    }}
+}}
+```
+
+This configuration enables uniform bucket-level access and object versioning. Run `terraform init`, `terraform plan`, and review the plan before `terraform apply`."""
+        return {
+                "response": response,
+                "requirement_frozen": True,
+                "frozen_objective": user_message,
+                "artifact_type": "terraform",
+        }
+
+
+MAX_REQUIREMENT_FILE_SIZE = 10 * 1024 * 1024
+SUPPORTED_REQUIREMENT_EXTENSIONS = {".pdf", ".txt", ".md", ".docx"}
+
+
+async def _extract_requirement_file(upload) -> tuple[str, str]:
+    filename = upload.filename or "uploaded-requirement"
+    suffix = Path(filename).suffix.lower()
+    if suffix not in SUPPORTED_REQUIREMENT_EXTENSIONS:
+        raise HTTPException(status_code=415, detail="Supported requirement files are PDF, DOCX, TXT, and MD.")
+    content = await upload.read(MAX_REQUIREMENT_FILE_SIZE + 1)
+    if len(content) > MAX_REQUIREMENT_FILE_SIZE:
+        raise HTTPException(status_code=413, detail="Requirement files must be 10 MB or smaller.")
+    try:
+        if suffix in {".txt", ".md"}:
+            text = content.decode("utf-8-sig")
+        elif suffix == ".docx":
+            from docx import Document
+            import io
+            text = "\n".join(paragraph.text for paragraph in Document(io.BytesIO(content)).paragraphs)
+        else:
+            from pypdf import PdfReader
+            import io
+            text = "\n".join(page.extract_text() or "" for page in PdfReader(io.BytesIO(content)).pages)
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=f"Could not extract text from {filename}.") from exc
+    text = text.strip()
+    if not text:
+        raise HTTPException(status_code=422, detail=f"No readable text found in {filename}.")
+    return filename, text[:100000]
+
+
 @app.post("/api/chat")
-async def dynamic_executive_chat(payload: dict, dep=Depends(require_auth)):
-    messages = payload.get("messages") or []
-    raw_message = payload.get("message")
-    user_message = validate_user_input(raw_message, field_name="Chat message", min_len=1, max_len=2000) if raw_message is not None else ""
+async def dynamic_executive_chat(request: Request, dep=Depends(require_auth)):
+    if request.headers.get("content-type", "").startswith("multipart/form-data"):
+        form = await request.form()
+        messages = []
+        raw_message = form.get("message")
+        upload = form.get("requirement_file")
+    else:
+        payload = await request.json()
+        messages = payload.get("messages") or []
+        raw_message = payload.get("message")
+        upload = None
+    if not isinstance(raw_message, str):
+        raw_message = ""
+    user_message = validate_user_input(raw_message, field_name="Chat message", min_len=1, max_len=2000) if raw_message else ""
+    if upload and hasattr(upload, "read"):
+        filename, extracted_text = await _extract_requirement_file(upload)
+        user_message = f"{user_message or 'Please analyze the attached requirement.'}\n\nAttached requirement ({filename}):\n{extracted_text}"
     if not user_message and not messages:
         raise HTTPException(status_code=400, detail="message or messages required")
+
+    terraform_response = _terraform_bucket_response(user_message)
+    if terraform_response:
+        return terraform_response
 
     from ..models.router import get_model
     model = get_model("senior_reasoning")
@@ -148,6 +255,8 @@ async def dynamic_executive_chat(payload: dict, dep=Depends(require_auth)):
                 elif "```" in content:
                     content = content.split("```")[1].split("```")[0].strip()
                 parsed = json.loads(content)
+                if not parsed.get("frozen_objective"):
+                    parsed["frozen_objective"] = user_message
                 return parsed
             except Exception:
                 return {

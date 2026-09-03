@@ -91,8 +91,8 @@ function openAgentModal(agentId) {
           </div>
           <div class="approval-actions">
             <input id="modalFeedbackInput" class="feedback-input" placeholder="Feedback or rejection reason..." />
-            <button onclick="approveTask('${task.id}')" class="btn-task-approve">Approve & Proceed</button>
-            <button onclick="rejectTask('${task.id}')" class="btn-task-redo">Redo (Reject with Feedback)</button>
+            <button id="modalApproveButton" onclick="approveTask('${task.id}')" class="btn-task-approve">Approve & Proceed</button>
+            <button id="modalRejectButton" onclick="rejectTask('${task.id}')" class="btn-task-redo">Redo (Reject with Feedback)</button>
           </div>
         </div>
       ` : ''}
@@ -104,13 +104,22 @@ function openAgentModal(agentId) {
   document.getElementById('agentDetailModal').classList.remove('hidden');
 }
 
+function setApprovalControlsLocked(locked) {
+  ['modalApproveButton', 'modalRejectButton', 'modalFeedbackInput'].forEach(id => {
+    const control = document.getElementById(id);
+    if (control) control.disabled = locked;
+  });
+}
+
 async function approveTask(taskId) {
   if (!currentRun) return;
+  setApprovalControlsLocked(true);
   try {
     await api(`/api/workflows/${currentRun.id}/tasks/${taskId}/approve`, { method: 'POST' });
     closeAgentModal();
     await loadData();
   } catch (err) {
+    setApprovalControlsLocked(false);
     alert(`Could not approve task: ${err.message}`);
   }
 }
@@ -123,6 +132,7 @@ async function rejectTask(taskId) {
     alert('Please enter a feedback comment / rejection reason before rejecting.');
     return;
   }
+  setApprovalControlsLocked(true);
   try {
     await api(`/api/workflows/${currentRun.id}/tasks/${taskId}/reject`, {
       method: 'POST',
@@ -132,6 +142,7 @@ async function rejectTask(taskId) {
     closeAgentModal();
     await loadData();
   } catch (err) {
+    setApprovalControlsLocked(false);
     alert(`Could not reject task: ${err.message}`);
   }
 }
@@ -467,15 +478,19 @@ function connect() {
 
 async function handleChatInput() {
   const inputEl = document.getElementById('chatInput');
+  const fileEl = document.getElementById('requirementFile');
   const chatHistory = document.getElementById('chatHistory');
   const reqText = (inputEl.value || '').trim();
-  if (!reqText) return;
+  const selectedFile = fileEl?.files?.[0];
+  if (!reqText && !selectedFile) return;
 
   const userMsg = document.createElement('div');
   userMsg.className = 'chat-msg user';
   userMsg.innerHTML = `<div class="chat-role">EXECUTIVE BUSINESS PARTNER</div><div class="chat-text">${escapeHtml(reqText)}</div>`;
   chatHistory.appendChild(userMsg);
   inputEl.value = '';
+  if (fileEl) fileEl.value = '';
+  if (selectedFileName) selectedFileName.textContent = 'No file selected';
   saveChatHistory();
 
   const thinkingMsg = document.createElement('div');
@@ -485,10 +500,12 @@ async function handleChatInput() {
   chatHistory.scrollTop = chatHistory.scrollHeight;
 
   try {
+    const formData = new FormData();
+    formData.append('message', reqText);
+    if (selectedFile) formData.append('requirement_file', selectedFile);
     const data = await api('/api/chat', {
       method: 'POST',
-      body: JSON.stringify({ message: reqText }),
-      headers: { 'Content-Type': 'application/json' }
+      body: formData
     });
 
     thinkingMsg.remove();
@@ -499,7 +516,7 @@ async function handleChatInput() {
 
     if (data.frozen_objective) {
       pendingRequirement = data.frozen_objective;
-    } else {
+    } else if (reqText) {
       pendingRequirement = reqText;
     }
     saveChatHistory();
@@ -571,6 +588,14 @@ async function startFreshWorkflow() {
 
 async function approveAndInitiateExecution() {
   const chatHistory = document.getElementById('chatHistory');
+  const apiKey = document.getElementById('apiKey')?.value.trim() || getSavedApiKey();
+  if (!apiKey) {
+    const errMsg = document.createElement('div');
+    errMsg.className = 'chat-msg error';
+    errMsg.innerHTML = `<div class="chat-role">SYSTEM ERROR</div><div class="chat-text">No monitoring API key or operator/admin token is configured. Enter one above and click Connect before approving execution.</div>`;
+    chatHistory.appendChild(errMsg);
+    return;
+  }
 
   const approveMsg = document.createElement('div');
   approveMsg.className = 'chat-msg system';
@@ -595,9 +620,24 @@ async function approveAndInitiateExecution() {
   } catch (err) {
     const errMsg = document.createElement('div');
     errMsg.className = 'chat-msg error';
-    errMsg.innerHTML = `<div class="chat-role">SYSTEM ERROR</div><div class="chat-text">Could not submit requirement. Please ensure you are connected with an operator or admin API key/token.</div>`;
+    const detail = err.message === '403'
+      ? 'The configured credential was rejected. Enter the current monitoring API key or an operator/admin bearer token, then click Connect.'
+      : `Could not submit requirement (HTTP ${escapeHtml(err.message)}).`;
+    errMsg.innerHTML = `<div class="chat-role">SYSTEM ERROR</div><div class="chat-text">${detail}</div>`;
     chatHistory.appendChild(errMsg);
   }
+}
+
+const requirementFile = document.getElementById('requirementFile');
+const attachFileBtn = document.getElementById('attachFileBtn');
+const selectedFileName = document.getElementById('selectedFileName');
+if (attachFileBtn && requirementFile) {
+  attachFileBtn.addEventListener('click', () => requirementFile.click());
+}
+if (requirementFile) {
+  requirementFile.addEventListener('change', () => {
+    if (selectedFileName) selectedFileName.textContent = requirementFile.files?.[0]?.name || 'No file selected';
+  });
 }
 
 const connBtn = document.getElementById('connectBtn');

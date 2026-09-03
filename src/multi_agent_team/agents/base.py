@@ -47,6 +47,45 @@ class Environment(Enum):
     PRODUCTION = "production"
 
 
+class AgentRole(str, Enum):
+    """Clear role definitions for all 22 agents to prevent ambiguity."""
+    # Product & Delivery
+    PRODUCT_OWNER = "product_owner"
+    PROJECT_MANAGER = "project_manager"
+    
+    # Architecture & Design
+    PLATFORM_ARCHITECT = "platform_architect"
+    SOLUTION_ARCHITECT = "solution_architect"
+    SECURITY_ARCHITECT = "security_architect"
+    
+    # DevOps & Infrastructure
+    DEVOPS_LEAD = "devops_lead"
+    CLOUD_INFRASTRUCTURE_ENGINEER = "cloud_infrastructure_engineer"
+    CICD_ENGINEER = "cicd_engineer"
+    SRE_OBSERVABILITY_ENGINEER = "sre_observability_engineer"
+    FINOPS_ENGINEER = "finops_engineer"
+    
+    # Development
+    DEVELOPMENT_LEAD = "development_lead"
+    FRONTEND_ENGINEER = "frontend_engineer"
+    BACKEND_ENGINEER = "backend_engineer"
+    INTEGRATION_ENGINEER = "integration_engineer"
+    AI_AUTOMATION_ENGINEER = "ai_automation_engineer"
+    
+    # Testing & Quality
+    QA_LEAD = "qa_lead"
+    TEST_AUTOMATION_ENGINEER = "test_automation_engineer"
+    NFR_TEST_ENGINEER = "nfr_test_engineer"
+    
+    # Application Management & Reliability
+    APPLICATION_MANAGEMENT_LEAD = "application_management_lead"
+    APPLICATION_SUPPORT_ENGINEER = "application_support_engineer"
+    PRODUCTION_RELIABILITY_ENGINEER = "production_reliability_engineer"
+    
+    # Engineering Governance
+    ENGINEERING_ORCHESTRATOR = "engineering_orchestrator"
+
+
 @dataclass
 class AgentMemory:
     """Layered memory architecture per Section 11."""
@@ -68,7 +107,7 @@ class AgentAuthority:
 @dataclass
 class AgentContract:
     """Complete agent contract per Section 4."""
-    id: str
+    id: AgentRole
     role: str
     team: str
     mission: str
@@ -94,8 +133,8 @@ class AgentMessage:
     """Structured agent communication per Section 5."""
     message_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     task_id: str = ""
-    sender: str = ""
-    recipients: List[str] = field(default_factory=list)
+    sender: AgentRole = AgentRole.ENGINEERING_ORCHESTRATOR
+    recipients: List[AgentRole] = field(default_factory=list)
     type: Literal["request", "response", "review", "approval", "escalation", "status"] = "request"
     objective: str = ""
     context: Dict[str, Any] = field(default_factory=dict)
@@ -279,8 +318,16 @@ def _parse_contract(data: Dict[str, Any]) -> AgentContract:
         institutional=data.get("memory", {}).get("institutional", [])
     )
     
+    # Convert string id to AgentRole enum
+    agent_id_str = data["id"]
+    try:
+        agent_id = AgentRole(agent_id_str)
+    except ValueError:
+        # Fallback for unknown roles - use ENGINEERING_ORCHESTRATOR as default
+        agent_id = AgentRole.ENGINEERING_ORCHESTRATOR
+    
     return AgentContract(
-        id=data["id"],
+        id=agent_id,
         role=data["role"],
         team=data["team"],
         mission=data["mission"],

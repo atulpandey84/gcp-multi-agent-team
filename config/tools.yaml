@@ -1,16 +1,402 @@
+# Multi-Agent Team Tool Configuration
+# Defines all available tools, their risk levels, approval requirements, and agent access
+
 tools:
-  knowledge_search: {risk: low, mutation: false}
-  repository_read: {risk: low, mutation: false}
-  repository_write: {risk: medium, mutation: true}
-  git_create_branch: {risk: low, mutation: true}
-  git_commit: {risk: medium, mutation: true}
-  git_pull_request: {risk: medium, mutation: true}
-  terraform_fmt: {risk: low, mutation: true}
-  terraform_validate: {risk: low, mutation: false}
-  terraform_plan: {risk: medium, mutation: false}
-  terraform_apply: {risk: critical, mutation: true, approval_required: true}
-  gcp_read: {risk: low, mutation: false}
-  gcp_mutation: {risk: critical, mutation: true, approval_required: true}
-  iam_policy_change: {risk: critical, mutation: true, approval_required: true}
-  project_delete: {risk: catastrophic, mutation: true, approval_required: true}
-  production_deployment: {risk: critical, mutation: true, approval_required: true}
+  # ==================== ARCHITECTURE TEAM TOOLS ====================
+  architecture.resource_design_validation:
+    name: "Resource Design Validation"
+    description: "Validate GCP resource designs for compliance with standards"
+    risk_level: medium
+    approval_required: false
+    mutable: false
+    agents:
+      - platform_architect
+      - solution_architect
+    allowed_actions:
+      - validate
+      - analyze
+      - recommend
+
+  architecture.network_design_validation:
+    name: "Network Design Validation"
+    description: "Validate network architecture for GCP"
+    risk_level: medium
+    approval_required: false
+    mutable: false
+    agents:
+      - platform_architect
+      - cloud_infrastructure_engineer
+
+  architecture.iam_design:
+    name: "IAM Model Design"
+    description: "Design and validate IAM models"
+    risk_level: high
+    approval_required: peer
+    mutable: false
+    agents:
+      - security_architect
+      - platform_architect
+
+  architecture.threat_modeling:
+    name: "Threat Modeling Tool"
+    description: "Perform threat modeling and risk analysis"
+    risk_level: medium
+    approval_required: false
+    mutable: false
+    agents:
+      - security_architect
+
+  # ==================== DEVELOPMENT TEAM TOOLS ====================
+  development.code_quality_analysis:
+    name: "Code Quality Analysis"
+    description: "Analyze code for quality metrics and issues"
+    risk_level: low
+    approval_required: false
+    mutable: false
+    agents:
+      - backend_engineer
+      - frontend_engineer
+      - development_lead
+    allowed_actions:
+      - analyze
+      - complexity_check
+      - style_check
+
+  development.api_contract_validation:
+    name: "API Contract Validation"
+    description: "Validate API contracts and specifications"
+    risk_level: medium
+    approval_required: peer
+    mutable: false
+    agents:
+      - backend_engineer
+      - integration_engineer
+      - development_lead
+
+  development.dependency_check:
+    name: "Dependency Check"
+    description: "Check dependencies for vulnerabilities"
+    risk_level: low
+    approval_required: false
+    mutable: false
+    agents:
+      - backend_engineer
+      - frontend_engineer
+      - integration_engineer
+
+  development.security_checklist:
+    name: "Security Checklist"
+    description: "Validate code against security requirements"
+    risk_level: medium
+    approval_required: peer
+    mutable: false
+    agents:
+      - backend_engineer
+      - frontend_engineer
+      - integration_engineer
+
+  # ==================== DEVOPS TEAM TOOLS ====================
+  devops.terraform_validation:
+    name: "Terraform Validation"
+    description: "Validate Terraform code and configuration"
+    risk_level: medium
+    approval_required: false
+    mutable: false
+    agents:
+      - cloud_infrastructure_engineer
+      - devops_lead
+    allowed_actions:
+      - validate
+      - format_check
+      - security_scan
+      - plan
+    environment_restriction: dev
+
+  devops.cloud_build_pipeline:
+    name: "Cloud Build Pipeline"
+    description: "Manage Cloud Build CI/CD pipelines"
+    risk_level: high
+    approval_required: peer
+    mutable: true
+    agents:
+      - cicd_engineer
+      - devops_lead
+    allowed_actions:
+      - create
+      - trigger
+      - monitor
+      - rollback
+
+  devops.monitoring_alert_config:
+    name: "Monitoring & Alert Configuration"
+    description: "Configure monitoring and alerting rules"
+    risk_level: medium
+    approval_required: peer
+    mutable: true
+    agents:
+      - sre_observability_engineer
+      - devops_lead
+
+  devops.cost_analysis:
+    name: "Cost Analysis"
+    description: "Analyze cloud costs and provide recommendations"
+    risk_level: low
+    approval_required: false
+    mutable: false
+    agents:
+      - finops_engineer
+      - devops_lead
+
+  # ==================== TESTING TEAM TOOLS ====================
+  testing.test_execution_orchestration:
+    name: "Test Execution Orchestration"
+    description: "Orchestrate test execution and results collection"
+    risk_level: medium
+    approval_required: false
+    mutable: false
+    agents:
+      - test_automation_engineer
+      - qa_lead
+    allowed_actions:
+      - execute_suite
+      - execute_regression
+      - collect_results
+
+  testing.coverage_analysis:
+    name: "Coverage Analysis"
+    description: "Analyze test coverage and identify gaps"
+    risk_level: low
+    approval_required: false
+    mutable: false
+    agents:
+      - test_automation_engineer
+      - qa_lead
+
+  testing.performance_testing:
+    name: "Performance Testing"
+    description: "Execute performance and load tests"
+    risk_level: medium
+    approval_required: peer
+    mutable: false
+    agents:
+      - nfr_test_engineer
+      - qa_lead
+
+  testing.defect_management:
+    name: "Defect Management"
+    description: "Manage test defects and issues"
+    risk_level: low
+    approval_required: false
+    mutable: true
+    agents:
+      - qa_lead
+      - test_automation_engineer
+
+  # ==================== MANAGEMENT & OPERATIONS TOOLS ====================
+  management.incident_management:
+    name: "Incident Management"
+    description: "Manage incident lifecycle and coordination"
+    risk_level: high
+    approval_required: peer
+    mutable: true
+    agents:
+      - application_management_lead
+      - application_support_engineer
+      - production_reliability_engineer
+    allowed_actions:
+      - create_incident
+      - classify
+      - escalate
+      - track_status
+      - close_incident
+
+  management.operational_readiness:
+    name: "Operational Readiness"
+    description: "Assess and approve operational readiness"
+    risk_level: high
+    approval_required: human
+    mutable: true
+    agents:
+      - application_management_lead
+      - production_reliability_engineer
+    allowed_actions:
+      - assess
+      - approve
+      - reject
+      - remediate
+
+  management.slo_tracking:
+    name: "SLO Tracking & Reporting"
+    description: "Track SLO achievement and generate reports"
+    risk_level: low
+    approval_required: false
+    mutable: false
+    agents:
+      - production_reliability_engineer
+      - application_management_lead
+
+  management.runbook_execution:
+    name: "Runbook Execution"
+    description: "Execute operational runbooks and procedures"
+    risk_level: medium
+    approval_required: peer
+    mutable: true
+    agents:
+      - application_support_engineer
+      - production_reliability_engineer
+
+  # ==================== CORE INFRASTRUCTURE TOOLS ====================
+  # Git & Repository Tools
+  knowledge_search:
+    name: "Knowledge Search"
+    description: "Search organizational knowledge base"
+    risk_level: low
+    approval_required: false
+    mutable: false
+    agents:
+      - all
+
+  repository_read:
+    name: "Repository Read"
+    description: "Read from git repository"
+    risk_level: low
+    approval_required: false
+    mutable: false
+    agents:
+      - all
+
+  repository_write:
+    name: "Repository Write"
+    description: "Write to git repository"
+    risk_level: medium
+    approval_required: false
+    mutable: true
+    agents:
+      - backend_engineer
+      - frontend_engineer
+      - integration_engineer
+      - ai_automation_engineer
+      - development_lead
+
+  git_create_branch:
+    name: "Git Create Branch"
+    description: "Create git branch"
+    risk_level: low
+    approval_required: false
+    mutable: true
+    agents:
+      - backend_engineer
+      - frontend_engineer
+      - development_lead
+
+  git_commit:
+    name: "Git Commit"
+    description: "Commit to git repository"
+    risk_level: medium
+    approval_required: false
+    mutable: true
+    agents:
+      - backend_engineer
+      - frontend_engineer
+      - development_lead
+
+  git_pull_request:
+    name: "Git Pull Request"
+    description: "Create git pull request"
+    risk_level: medium
+    approval_required: false
+    mutable: true
+    agents:
+      - backend_engineer
+      - frontend_engineer
+      - development_lead
+
+  # Terraform Tools (Legacy)
+  terraform_fmt:
+    name: "Terraform Format"
+    description: "Format Terraform code"
+    risk_level: low
+    approval_required: false
+    mutable: true
+    agents:
+      - cloud_infrastructure_engineer
+
+  terraform_validate:
+    name: "Terraform Validate"
+    description: "Validate Terraform configuration"
+    risk_level: low
+    approval_required: false
+    mutable: false
+    agents:
+      - cloud_infrastructure_engineer
+      - devops_lead
+
+  terraform_plan:
+    name: "Terraform Plan"
+    description: "Generate Terraform plan"
+    risk_level: medium
+    approval_required: false
+    mutable: false
+    agents:
+      - cloud_infrastructure_engineer
+      - devops_lead
+
+  terraform_apply:
+    name: "Terraform Apply"
+    description: "Apply Terraform configuration"
+    risk_level: critical
+    approval_required: human
+    mutable: true
+    agents:
+      - cloud_infrastructure_engineer
+      - devops_lead
+
+  # GCP Tools
+  gcp_read:
+    name: "GCP Read"
+    description: "Read from GCP resources"
+    risk_level: low
+    approval_required: false
+    mutable: false
+    agents:
+      - all
+
+  gcp_mutation:
+    name: "GCP Mutation"
+    description: "Mutate GCP resources"
+    risk_level: critical
+    approval_required: human
+    mutable: true
+    agents:
+      - cloud_infrastructure_engineer
+      - devops_lead
+
+  iam_policy_change:
+    name: "IAM Policy Change"
+    description: "Change IAM policies"
+    risk_level: critical
+    approval_required: human
+    mutable: true
+    agents:
+      - security_architect
+      - platform_architect
+
+  project_delete:
+    name: "Project Delete"
+    description: "Delete GCP project"
+    risk_level: catastrophic
+    approval_required: human
+    mutable: true
+    agents:
+      - platform_architect
+
+  production_deployment:
+    name: "Production Deployment"
+    description: "Deploy to production"
+    risk_level: critical
+    approval_required: human
+    mutable: true
+    agents:
+      - devops_lead
+      - cicd_engineer
+      - production_reliability_engineer

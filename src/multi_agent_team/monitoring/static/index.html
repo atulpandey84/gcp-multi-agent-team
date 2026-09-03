@@ -6,7 +6,7 @@
   <title>Control Room | Multi-Agent Engineering Organization</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/style.css" />
+  <link rel="stylesheet" href="/static/style.css?v=upload-button-2" />
 </head>
 <body>
   <header class="topbar">
@@ -45,6 +45,9 @@
       </div>
       <div class="chat-input-row">
         <input id="chatInput" type="text" placeholder="Type your requirement or question (e.g., 'I want a microservices architecture with automated CI/CD pipeline')..." />
+        <button id="attachFileBtn" type="button" class="file-picker">Attach file</button>
+        <input id="requirementFile" type="file" accept=".pdf,.docx,.txt,.md" hidden />
+        <span id="selectedFileName" class="selected-file-name">No file selected</span>
         <button id="sendChatBtn">Send Requirement</button>
       </div>
     </section>
@@ -117,6 +120,6 @@
       </div>
     </div>
   </main>
-  <script src="/static/app.js"></script>
+  <script src="/static/app.js?v=upload-button-2"></script>
 </body>
 </html>

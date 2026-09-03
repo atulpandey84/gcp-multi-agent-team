@@ -84,3 +84,38 @@ def test_provisioning_requires_human_approval(monkeypatch):
     completed = runtime.get_run(run["id"])
     assert completed["status"] == "blocked"
     assert completed["provisioning"]["status"] == "blocked"
+
+
+def test_leadership_agents_have_distinct_deliverable_personas(monkeypatch):
+    prompts = {}
+
+    class FakeResponse:
+        content = "persona output"
+        response_metadata = {}
+
+    class FakeModel:
+        def invoke(self, prompt):
+            prompts[prompt] = True
+            return FakeResponse()
+
+    monkeypatch.setattr(engine, "get_model", lambda _policy: FakeModel())
+
+    outputs = [
+        engine.invoke_specialist(agent_id, title, "Build a GCP service", {"model_policy": "senior_reasoning"})
+        for agent_id, title in [
+            ("product_owner", "Shape the requirement"),
+            ("project_manager", "Plan delivery and dependencies"),
+            ("engineering_orchestrator", "Decompose the engineering workflow"),
+            ("engineering_orchestrator", "Package evidence and close the workflow"),
+        ]
+    ]
+
+    document_types = [output["document_type"] for output in outputs]
+    assert document_types == [
+        "product_requirements_and_acceptance_criteria",
+        "project_plan_spec",
+        "engineering_workflow_and_evidence_plan",
+        "workflow_closeout_and_evidence_summary",
+    ]
+    assert len(set(document_types)) == len(document_types)
+    assert len(prompts) == 3

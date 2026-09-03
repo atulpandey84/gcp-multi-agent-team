@@ -17,3 +17,6 @@ ruff
 mypy
 sqlmodel
 aiofiles
+pypdf
+python-docx
+python-multipart

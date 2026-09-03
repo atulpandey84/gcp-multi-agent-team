@@ -30,6 +30,37 @@ PILOT_STAGES = [
 ]
 GATE_NAMES = ["requirements", "architecture", "security", "finops", "implementation", "qa", "operational_readiness", "release"]
 
+PERSONA_PROFILES = {
+    "product_owner": {
+        "document_type": "product_requirements_and_acceptance_criteria",
+        "document_name": "Product Requirements, Scope & Acceptance Criteria",
+        "instruction": (
+            "Act strictly as the Product Owner. Translate the objective into user outcomes, prioritized scope, "
+            "epics, user stories, assumptions, out-of-scope boundaries, and testable acceptance criteria. "
+            "Do not produce a delivery schedule, technical architecture, implementation code, or orchestration plan."
+        ),
+    },
+    "project_manager": {
+        "document_type": "delivery_plan_and_risk_register",
+        "document_name": "Delivery Plan, Milestones, Dependencies & Risk Register",
+        "instruction": (
+            "Act strictly as the Project Manager. Turn the approved requirements into a delivery plan with work "
+            "packages, sequencing, milestones, dependencies, owners, risks, mitigations, and status criteria. "
+            "Do not redefine product requirements or produce technical implementation code."
+        ),
+    },
+    "engineering_orchestrator": {
+        "document_type": "engineering_workflow_and_evidence_plan",
+        "document_name": "Engineering Workflow, Agent Handoffs & Evidence Plan",
+        "instruction": (
+            "Act strictly as the Engineering Orchestrator. Convert the requirement and delivery plan into an "
+            "ordered agent execution workflow. Define handoffs, inputs and outputs per agent, dependency gates, "
+            "review checkpoints, evidence artifacts, escalation paths, and completion criteria. Do not write a "
+            "product backlog, project schedule, or detailed implementation code."
+        ),
+    },
+}
+
 @dataclass
 class WorkflowTask:
     id: str
@@ -135,15 +166,23 @@ def invoke_specialist(agent_id: str, title: str, objective: str, context: dict[s
 
     model = get_model(context["model_policy"])
 
-    # Determine document type based on persona role
-    if agent_id in ("product_owner", "project_manager", "engineering_orchestrator"):
-        doc_type = "requirement_understanding_and_plan"
-        doc_name = "Detailed Requirement Understanding & Implementation Plan Document"
-        role_instruction = (
-            "You are a Manager / Orchestrator persona. Produce a comprehensive Requirement Understanding Document "
-            "and a Detailed Plan. Include executive objectives, scope boundaries, task breakdowns, milestone dependencies, "
-            "and risk mitigation strategies."
-        )
+    # Use an explicit deliverable contract so adjacent personas cannot collapse into one generic document.
+    if agent_id in PERSONA_PROFILES:
+        profile = PERSONA_PROFILES[agent_id]
+        if agent_id == "engineering_orchestrator" and "Package evidence" in title:
+            profile = {
+                **profile,
+                "document_type": "workflow_closeout_and_evidence_summary",
+                "document_name": "Workflow Closeout, Evidence Summary & Release Decision",
+                "instruction": (
+                    "Act strictly as the Engineering Orchestrator closing the workflow. Summarize completed agent "
+                    "outputs, evidence artifact locations, gate results, unresolved risks, policy decisions, and the "
+                    "release recommendation. Do not recreate the product requirements or delivery schedule."
+                ),
+            }
+        doc_type = profile["document_type"]
+        doc_name = profile["document_name"]
+        role_instruction = profile["instruction"]
     elif agent_id in ("solution_architect", "platform_architect", "security_architect"):
         doc_type = "detailed_architectural_design"
         doc_name = "Detailed Solution Architecture & Security Design Specification Document"
