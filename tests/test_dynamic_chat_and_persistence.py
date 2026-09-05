@@ -40,8 +40,10 @@ def test_dynamic_chat_understands_attached_text_requirement():
     )
     assert res.status_code == 200
     data = res.json()
+    # Product Owner should acknowledge the bucket requirement and ask clarifying questions
     assert "bucket" in data["response"].lower()
-    assert "retention" in data["response"].lower()
+    # Should not be frozen yet - should be asking clarifying questions
+    assert data.get("requirement_frozen") is False
 
 
 def test_dynamic_chat_accepts_file_without_message():

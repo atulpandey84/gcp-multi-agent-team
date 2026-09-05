@@ -1,0 +1,45 @@
+# API Configuration
+# Defines API security settings, allowed origins, and authentication
+
+api:
+  # API Key Authentication
+  authentication:
+    enabled: true
+    header_name: "X-API-KEY"
+    # In production, these should be stored securely (e.g., HashiCorp Vault, AWS Secrets Manager)
+    # For development, we use a simple key
+    valid_keys:
+      - "dev-api-key-12345"
+      - "test-api-key-67890"
+    # Optional: Key to agent role mapping for authorization
+    key_to_agent_role:
+      "dev-api-key-12345": "platform_architect"
+      "test-api-key-67890": "backend_engineer"
+
+  # CORS Configuration
+  cors:
+    # List of allowed origins (use specific domains in production)
+    allow_origins:
+      - "http://localhost:3000"
+      - "http://127.0.0.1:3000"
+      - "https://dev.example.com"
+    allow_credentials: true
+    allow_methods:
+      - "GET"
+      - "POST"
+      - "PUT"
+      - "DELETE"
+      - "OPTIONS"
+    allow_headers:
+      - "Authorization"
+      - "Content-Type"
+      - "X-API-KEY"
+    expose_headers:
+      - "X-Request-ID"
+    max_age: 3600
+
+  # Rate Limiting (optional)
+  rate_limiting:
+    enabled: false
+    requests_per_minute: 60
+    burst: 10
