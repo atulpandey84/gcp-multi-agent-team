@@ -58,6 +58,7 @@ Your inputs are:
 
 You must produce:
 - **Project plan** - End-to-end delivery roadmap
+- Detailed Task Breakdown - A structured list of technical tasks required for implementation. Each task must include: 1) Technical Scope, 2) Required Agents/Skills, 3) Technical Dependencies (e.g., API X must exist), 4) Estimated Effort (story points/weeks). This list must be highly granular and directly consumable by the Engineering Orchestrator.
 - **Sprint plan** - Iteration breakdown with assignments
 - **RAID log** - Risks, assumptions, issues, decisions
 - **Status reports** - Progress, blockers, forecast

@@ -7,6 +7,17 @@ import uuid
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any, Callable, List
+from ..utils.presentation_generator import generate_presentation
+import asyncio
+import inspect
+import json
+import os
+import subprocess
+import uuid
+from dataclasses import asdict, dataclass, field
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Callable
 
 from ..agents.contracts import get_agent_contract
@@ -556,6 +567,32 @@ class WorkflowRuntime:
                     run.status = "blocked"
                     self._emit(run, "workflow_blocked", {"reason": run.provisioning["reason"]})
                     return
+            run.status = "completed"
+
+            # --- NEW: Generate Final Presentation Artifact ---
+            presentation_title = f"{run.name} Workflow Summary: {run.model_policy.upper()}"
+            
+            # Structure content sections from all gathered artifacts
+            content_sections = [
+                {"title": f"Artifact: {name}", "content": [f"Source: {artifact['source_file']}", f"Details: {json.dumps(artifact['data'], indent=2)}"]}
+                for name, artifact in run.artifacts.items()
+            ]
+
+            # Generate the PPTX file in a designated output directory
+            output_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../..", "output", "presentation.pptx")
+            presentation_path = generate_presentation(
+                title=presentation_title,
+                content_sections=content_sections,
+                output_path=output_path
+            )
+            run.artifacts["presentation_path"] = presentation_path # Store the path as a final artifact
+            # -------------------------------------------------
+
+            run.progress = 100
+            run.current_task_id = None
+            _write_artifact(run, "final-evidence.json", {"status": run.status, "gates": run.gates, "artifacts": run.artifacts})
+            self._emit(run, "workflow_completed", {"artifacts": run.artifacts})
+        except asyncio.CancelledError:
                 provision_result = self._provisioner(terraform_root)
                 run.provisioning.update({"status": "completed" if provision_result.get("passed") else "failed", "result": provision_result})
                 _write_artifact(run, "provisioning.json", run.provisioning)
