@@ -18,14 +18,14 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Callable, Awaitable
 import copy
 
-from src.multi_agent_team.schemas.contracts import (
+from multi_agent_team.schemas.contracts import (
     AgentRole,
     TaskStatus,
     WorkflowState,
     CanonicalMessagePayload,
 )
-from src.multi_agent_team.agents.base import load_agent_contracts
-from src.multi_agent_team.policies.engine import validate_quality_gates, validate_separation_of_duties
+from multi_agent_team.agents.base import load_agent_contracts
+from multi_agent_team.policies.engine import validate_quality_gates, validate_separation_of_duties
 
 
 class CheckpointStatus(str, Enum):

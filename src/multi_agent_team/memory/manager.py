@@ -14,8 +14,8 @@ import json
 import uuid
 from contextlib import asynccontextmanager
 
-from src.multi_agent_team.schemas.contracts import AgentRole, TaskStatus, WorkflowState
-from src.multi_agent_team.monitoring.models_sa import Base, Audit, Approval
+from multi_agent_team.schemas.contracts import AgentRole, TaskStatus, WorkflowState
+from multi_agent_team.monitoring.models_sa import Base, Audit, Approval
 from sqlalchemy import create_engine, Column, String, Text, Integer, TIMESTAMP, JSON, ForeignKey, select
 from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy.sql import func

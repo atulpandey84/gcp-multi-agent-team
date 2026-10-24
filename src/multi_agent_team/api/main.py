@@ -12,7 +12,7 @@ import uuid
 import yaml
 import os
 
-from src.multi_agent_team.schemas.contracts import (
+from multi_agent_team.schemas.contracts import (
     AgentRole,
     Team,
     TaskStatus,
@@ -30,7 +30,7 @@ from src.multi_agent_team.schemas.contracts import (
     ToolResult,
     WorkflowState,
 )
-from src.multi_agent_team.api.permissions import permission_manager
+from multi_agent_team.api.permissions import permission_manager
 
 # Load API configuration
 def load_api_config() -> dict:

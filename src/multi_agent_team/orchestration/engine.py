@@ -6,14 +6,14 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from src.multi_agent_team.agents.base import load_agent_contracts
-from src.multi_agent_team.policies.engine import validate_quality_gates
-from src.multi_agent_team.orchestration.state_machine import (
+from multi_agent_team.agents.base import load_agent_contracts
+from multi_agent_team.policies.engine import validate_quality_gates
+from multi_agent_team.orchestration.state_machine import (
     WorkflowStateMachine,
     OrchestrationStep,
     create_default_workflow_steps,
 )
-from src.multi_agent_team.schemas.contracts import AgentRole, CanonicalMessagePayload
+from multi_agent_team.schemas.contracts import AgentRole, CanonicalMessagePayload
 
 
 def _workflow_root() -> Path:
