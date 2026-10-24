@@ -6,6 +6,7 @@ Provides REST API endpoints for workflow management, agent monitoring, and syste
 from fastapi import FastAPI, HTTPException, Depends, BackgroundTasks, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import APIKeyHeader
+from pydantic import BaseModel
 from typing import Dict, List, Optional, Any, Literal
 from datetime import datetime, timezone
 import uuid
@@ -31,6 +32,7 @@ from multi_agent_team.schemas.contracts import (
     WorkflowState,
 )
 from multi_agent_team.api.permissions import permission_manager
+from ..governance.engine import GovernanceEngine
 
 # Load API configuration
 def load_api_config() -> dict:
@@ -341,3 +343,65 @@ initialize_agent_statuses()
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
+_governance = GovernanceEngine()
+pending_approvals = {}
+
+
+class ApprovalRequest(BaseModel):
+    action_type: str
+    risk_level: str
+    context: dict = {}
+    requested_by: str
+
+
+class ApprovalDecision(BaseModel):
+    approved: bool
+    reason: str = ""
+    decided_by: str
+
+
+@app.post("/approvals/request")
+async def request_human_approval(request: ApprovalRequest, api_key: str = Depends(verify_api_key)):
+    requires = _governance.requires_human_approval(request.risk_level, request.action_type)
+    if not requires:
+        raise HTTPException(status_code=400, detail="Action does not require human approval")
+    approval_id = str(uuid.uuid4())
+    pending_approvals[approval_id] = {
+        "approval_id": approval_id,
+        "action_type": request.action_type,
+        "risk_level": request.risk_level,
+        "context": request.context,
+        "requested_by": request.requested_by,
+        "status": "pending",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    return {"approval_id": approval_id, "status": "pending", "requires_human_approval": True}
+
+
+@app.get("/approvals")
+async def list_pending_approvals(api_key: str = Depends(verify_api_key)):
+    pending = [a for a in pending_approvals.values() if a["status"] == "pending"]
+    return {"pending_approvals": pending, "count": len(pending)}
+
+
+@app.post("/approvals/{approval_id}/decision")
+async def decide_approval(approval_id: str, decision: ApprovalDecision, api_key: str = Depends(verify_api_key)):
+    if approval_id not in pending_approvals:
+        raise HTTPException(status_code=404, detail="Approval request not found")
+    approval = pending_approvals[approval_id]
+    if approval["status"] != "pending":
+        raise HTTPException(status_code=400, detail="Approval request already decided")
+    approval["status"] = "approved" if decision.approved else "rejected"
+    approval["decided_by"] = decision.decided_by
+    approval["decision_reason"] = decision.reason
+    approval["decided_at"] = datetime.now(timezone.utc).isoformat()
+    return {
+        "approval_id": approval_id,
+        "status": approval["status"],
+        "decided_by": decision.decided_by,
+        "reason": decision.reason,
+    }
+
+
+

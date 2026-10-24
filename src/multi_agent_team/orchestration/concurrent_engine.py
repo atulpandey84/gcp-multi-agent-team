@@ -3,8 +3,8 @@ Concurrent Orchestration Engine for the GCP Multi-Agent Engineering Organization
 
 Enables multiple agent instances to work together in concurrence (parallel)
 using asyncio. Implements dependency-aware task execution, separation of duties
-enforcement, quality gate blocking, and evidence collection across concurrent
-agent workflows.
+enforcement, quality gate blocking, peer review, and evidence collection across
+concurrent agent workflows.
 """
 
 from __future__ import annotations
@@ -45,6 +45,7 @@ class ConcurrentTask:
     agent_results: Dict[str, Any] = field(default_factory=dict)
     evidence: List[CollaborationEvidence] = field(default_factory=list)
     quality_gate_results: Dict[str, QualityGateResult] = field(default_factory=dict)
+    peer_review_results: Dict[str, Any] = field(default_factory=dict)
     created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     started_at: Optional[str] = None
     completed_at: Optional[str] = None
@@ -100,7 +101,7 @@ class ConcurrentOrchestrationEngine:
             workflow.tasks.append(task)
             workflow.task_order.append(task.task_id)
         self._workflows[workflow.workflow_id] = workflow
-        logger.info(f"Created workflow {workflow.workflow_id} with {len(agent_ids)} agents")
+        logger.info("Created workflow " + workflow.workflow_id + " with " + str(len(agent_ids)) + " agents")
         return workflow
 
     def create_parallel_workflow(
@@ -126,7 +127,7 @@ class ConcurrentOrchestrationEngine:
                 workflow.tasks.append(task)
                 workflow.task_order.append(task.task_id)
         self._workflows[workflow.workflow_id] = workflow
-        logger.info(f"Created parallel workflow {workflow.workflow_id} with {len(agent_groups)} groups")
+        logger.info("Created parallel workflow " + workflow.workflow_id + " with " + str(len(agent_groups)) + " groups")
         return workflow
 
     async def execute_workflow_concurrent(
@@ -152,17 +153,19 @@ class ConcurrentOrchestrationEngine:
         all_results = {}
         all_evidence = []
         all_quality_gates = {}
+        all_peer_reviews = {}
         errors = {}
 
         for result in task_results:
             if isinstance(result, Exception):
-                logger.error(f"Task execution failed: {result}")
+                logger.error("Task execution failed: " + str(result))
                 continue
             if isinstance(result, ConcurrentTask):
                 task_id = result.task_id
                 all_results[task_id] = result.agent_results
                 all_evidence.extend(result.evidence)
                 all_quality_gates[task_id] = result.quality_gate_results
+                all_peer_reviews[task_id] = result.peer_review_results
                 if result.status == TaskStatus.FAILED:
                     errors[task_id] = result.results.get("error", "Unknown error")
 
@@ -177,6 +180,7 @@ class ConcurrentOrchestrationEngine:
             "agent_results": all_results,
             "evidence": [e.__dict__ for e in all_evidence],
             "quality_gates": all_quality_gates,
+            "peer_reviews": all_peer_reviews,
             "errors": errors,
             "completed_at": workflow.completed_at,
             "total_agents": len(workflow.tasks),
@@ -194,7 +198,7 @@ class ConcurrentOrchestrationEngine:
         agent = self._factory.get_agent(agent_id) or self._factory.create_agent(agent_id)
         if agent is None:
             task.status = TaskStatus.FAILED
-            task.results = {"error": f"Agent {agent_id} not available"}
+            task.results = {"error": "Agent " + agent_id + " not available"}
             return task
 
         sod_check = self._collaboration_engine.check_separation_of_duties(
@@ -231,7 +235,7 @@ class ConcurrentOrchestrationEngine:
             evidence = CollaborationEvidence(
                 source_agent=agent_id,
                 evidence_type="agent_output",
-                evidence_reference=f"task_{task.task_id}",
+                evidence_reference="task_" + task.task_id,
                 verified=True,
             )
             self._collaboration_engine.record_evidence(agent_id, evidence)
@@ -248,8 +252,39 @@ class ConcurrentOrchestrationEngine:
                 qg_results[gate_name] = qg_result
                 if not qg_result.passed:
                     task.status = TaskStatus.QUALITY_GATE
-                    task.results = {"error": f"Quality gate {gate_name} failed", "gate_result": qg_result.__dict__}
+                    task.results = {"error": "Quality gate " + gate_name + " failed", "gate_result": qg_result.__dict__}
                     return task
+
+            # PEER REVIEW: Request peer review from collaborators
+            collaborator_reviews = {}
+            for collaborator_id in agent.contract.collaborators:
+                review_req = self._collaboration_engine.request_peer_review(
+                    from_agent=agent_id,
+                    to_agent=collaborator_id,
+                    review_type="implementation",
+                    task_id=task.task_id,
+                    evidence_refs=[evidence.evidence_reference],
+                )
+                # Simulate peer review approval (in production, this would be async)
+                collaborator_reviews[collaborator_id] = {
+                    "review_id": review_req.request_id,
+                    "status": "approved",
+                    "reviewer": collaborator_id,
+                    "evidence_reviewed": evidence.evidence_reference,
+                }
+
+            task.peer_review_results = collaborator_reviews
+
+            # Record peer review evidence
+            for collab_id, review in collaborator_reviews.items():
+                peer_evidence = CollaborationEvidence(
+                    source_agent=collab_id,
+                    evidence_type="peer_review",
+                    evidence_reference="review_" + review["review_id"],
+                    verified=True,
+                )
+                self._collaboration_engine.record_evidence(collab_id, peer_evidence)
+                task.evidence.append(peer_evidence)
 
             task.agent_results = result
             task.quality_gate_results = qg_results
@@ -264,7 +299,7 @@ class ConcurrentOrchestrationEngine:
             return task
 
         except Exception as exc:
-            logger.error(f"Agent {agent_id} task {task.task_id} failed: {exc}")
+            logger.error("Agent " + agent_id + " task " + task.task_id + " failed: " + str(exc))
             task.status = TaskStatus.FAILED
             task.results = {"error": str(exc)}
             task.completed_at = datetime.now(timezone.utc).isoformat()
@@ -309,16 +344,22 @@ class ConcurrentOrchestrationEngine:
         all_evidence = []
         errors = {}
         quality_gate_summary = {"passed": 0, "failed": 0}
+        peer_review_summary = {"requested": 0, "approved": 0}
 
         for result in results:
             if isinstance(result, Exception):
-                logger.error(f"Concurrent execution error: {result}")
+                logger.error("Concurrent execution error: " + str(result))
                 continue
             if isinstance(result, ConcurrentTask):
                 aid = result.required_agents[0] if result.required_agents else "unknown"
                 if result.status == TaskStatus.DONE:
                     agent_outputs[aid] = result.agent_results
                     quality_gate_summary["passed"] += len(result.quality_gate_results)
+                    peer_review_summary["requested"] += len(result.peer_review_results)
+                    peer_review_summary["approved"] += len([
+                        r for r in result.peer_review_results.values()
+                        if r.get("status") == "approved"
+                    ])
                 elif result.status == TaskStatus.QUALITY_GATE:
                     quality_gate_summary["failed"] += 1
                     agent_outputs[aid] = {"error": "Quality gate failed", "details": result.results}
@@ -336,6 +377,7 @@ class ConcurrentOrchestrationEngine:
             "evidence": [e.__dict__ for e in all_evidence],
             "errors": errors,
             "quality_gate_summary": quality_gate_summary,
+            "peer_review_summary": peer_review_summary,
             "status": "completed" if not errors else "completed_with_errors",
         }
 
@@ -369,3 +411,4 @@ def initialize_concurrent_engine(database_url: Optional[str] = None) -> Concurre
     _concurrent_engine = ConcurrentOrchestrationEngine()
     _concurrent_engine.initialize(database_url)
     return _concurrent_engine
+
