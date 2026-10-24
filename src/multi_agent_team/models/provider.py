@@ -139,6 +139,138 @@ def select_best_ollama_instance() -> dict:
     return best or candidates[0]
 
 
+class MockModel:
+    """Mock model for demo/testing when no real model provider is available.
+    
+    Returns structured, plausible responses based on the prompt content
+    so the full agent pipeline can execute without NVIDIA API or Ollama.
+    """
+
+    def __init__(self, policy: str):
+        self.policy = policy
+        self.model_name = f"mock-{policy}"
+        self.provider = "Mock (demo mode)"
+        self._stats = ModelStats()
+
+    def invoke(self, prompt: str, **kwargs) -> Any:
+        """Return a mock response based on prompt content."""
+        import time
+
+        start = time.time()
+        response = self._generate_mock_response(prompt)
+        latency_ms = (time.time() - start) * 1000
+
+        # Create a mock result object with response_metadata
+        class _MockResult:
+            def __init__(self, content, metadata):
+                self.content = content
+                self.response_metadata = metadata
+
+        result = _MockResult(
+            str(response),
+            {
+                "model_provider": self.provider,
+                "model_name": self.model_name,
+                "model_location": "Local (mock)",
+                "policy": self.policy,
+                "latency_ms": latency_ms,
+                "mock": True,
+            },
+        )
+
+        self._stats.total_invocations += 1
+        self._stats.success_count += 1
+        self._stats.total_latency_ms += latency_ms
+        self._stats.last_used = datetime.now(timezone.utc).isoformat()
+        return result
+
+    def _generate_mock_response(self, prompt: str) -> Dict[str, Any]:
+        """Generate a context-aware mock response."""
+        prompt_lower = prompt.lower()
+
+        # Detect the type of request from prompt content
+        if "architecture" in prompt_lower or "platform" in prompt_lower:
+            return {
+                "status": "mock_architecture_designed",
+                "components": ["resource_hierarchy", "network_design", "iam_model"],
+                "recommendations": [
+                    "Use shared VPC for network isolation",
+                    "Enable VPC Service Controls",
+                    "Implement least-privilege IAM",
+                ],
+                "mock": True,
+            }
+        elif "security" in prompt_lower or "threat" in prompt_lower:
+            return {
+                "status": "mock_security_reviewed",
+                "threat_model": {"id": "TM-MOCK", "risks": ["Data exposure", "Unauthorized access"]},
+                "controls": [
+                    "Encryption at rest and in transit",
+                    "IAM least privilege",
+                    "Audit logging",
+                ],
+                "mock": True,
+            }
+        elif "requirement" in prompt_lower or "product" in prompt_lower:
+            return {
+                "status": "mock_requirements_defined",
+                "requirements": ["REQ-001: GCP Landing Zone environment"],
+                "acceptance_criteria": ["Environment provisioned", "Security controls applied"],
+                "epics": ["Epic-1: Infrastructure provisioning"],
+                "mock": True,
+            }
+        elif "cost" in prompt_lower or "finops" in prompt_lower:
+            return {
+                "status": "mock_cost_analyzed",
+                "monthly_cost_estimate": 1250.00,
+                "budget_status": "within_budget",
+                "optimizations": ["Right-size VMs", "Use committed use discounts"],
+                "mock": True,
+            }
+        elif "test" in prompt_lower or "qa" in prompt_lower:
+            return {
+                "status": "mock_tests_executed",
+                "test_coverage": 85.0,
+                "tests_passed": 42,
+                "tests_failed": 0,
+                "mock": True,
+            }
+        elif "deploy" in prompt_lower or "devops" in prompt_lower or "pipeline" in prompt_lower:
+            return {
+                "status": "mock_deployment_ready",
+                "pipeline_status": "ready",
+                "rollback_available": True,
+                "environments": ["development", "staging"],
+                "mock": True,
+            }
+        elif "monitor" in prompt_lower or "sre" in prompt_lower or "observability" in prompt_lower:
+            return {
+                "status": "mock_observability_configured",
+                "slo": "99.9%",
+                "alerts_configured": True,
+                "dashboards": ["infrastructure", "application"],
+                "mock": True,
+            }
+        elif "code" in prompt_lower or "implement" in prompt_lower or "backend" in prompt_lower or "frontend" in prompt_lower:
+            return {
+                "status": "mock_code_implemented",
+                "files_created": ["main.py", "utils.py", "tests.py"],
+                "tests_passed": True,
+                "mock": True,
+            }
+        else:
+            return {
+                "status": "mock_response",
+                "summary": "Mock response generated (no real model provider available)",
+                "prompt_preview": prompt[:100] + "..." if len(prompt) > 100 else prompt,
+                "mock": True,
+            }
+
+    async def ainvoke(self, prompt: str, **kwargs) -> Any:
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(None, self.invoke, prompt, **kwargs)
+
+
 class SmartFallbackModel:
     """Wraps a primary NVIDIA model with Ollama fallback on failure."""
 
@@ -179,45 +311,48 @@ class SmartFallbackModel:
         return self._ollama_fallback(prompt, last_error)
 
     def _ollama_fallback(self, prompt: str, nvidia_err: str) -> Any:
-        if ChatOllama is None:
-            raise RuntimeError(f"NVIDIA API failed ({nvidia_err}) and langchain_ollama is not installed")
+        if ChatOllama is not None:
+            try:
+                ollama_inst = select_best_ollama_instance()
+                target_url = ollama_inst["url"]
+                requested_model = self.cfg.get("ollama_model", "llama3")
+                available_models = ollama_inst.get("available_models") or fetch_ollama_tags(target_url)
 
-        ollama_inst = select_best_ollama_instance()
-        target_url = ollama_inst["url"]
-        requested_model = self.cfg.get("ollama_model", "llama3")
-        available_models = ollama_inst.get("available_models") or fetch_ollama_tags(target_url)
+                chosen_model = None
+                if any(requested_model in m for m in available_models):
+                    chosen_model = requested_model
+                else:
+                    pulled = trigger_ollama_pull(target_url, requested_model)
+                    if pulled:
+                        chosen_model = requested_model
+                    elif available_models:
+                        chosen_model = available_models[0].split(":")[0]
+                        logger.info(f"Auto-pull failed. Selected alternate model '{chosen_model}' on host {target_url}.")
 
-        chosen_model = None
-        if any(requested_model in m for m in available_models):
-            chosen_model = requested_model
-        else:
-            pulled = trigger_ollama_pull(target_url, requested_model)
-            if pulled:
-                chosen_model = requested_model
-            elif available_models:
-                chosen_model = available_models[0].split(":")[0]
-                logger.info(f"Auto-pull failed. Selected alternate model '{chosen_model}' on host {target_url}.")
+                if not chosen_model:
+                    logger.warning(
+                        f"Ollama has no suitable model for {self.policy}. Using MockModel."
+                    )
+                    return MockModel(self.policy).invoke(prompt)
 
-        if not chosen_model:
-            raise RuntimeError(
-                f"Model Provider Failure: NVIDIA API Error ({nvidia_err}). "
-                f"System Host '{target_url}' is missing requested model '{requested_model}' "
-                f"and auto-download failed with no available alternate models installed."
-            )
-
-        start = time.time()
-        ollama_model = ChatOllama(base_url=target_url, model=chosen_model, temperature=self.temperature)
-        res = ollama_model.invoke(prompt)
-        latency_ms = (time.time() - start) * 1000
-        if hasattr(res, "response_metadata"):
-            res.response_metadata["model_provider"] = f"Ollama ({chosen_model})"
-            res.response_metadata["model_name"] = chosen_model
-            res.response_metadata["model_location"] = ollama_inst["label"]
-            res.response_metadata["policy"] = self.policy
-            res.response_metadata["latency_ms"] = latency_ms
-            res.response_metadata["fallback"] = True
-        self._record_stats(success=True, latency_ms=latency_ms)
-        return res
+                start = time.time()
+                ollama_model = ChatOllama(base_url=target_url, model=chosen_model, temperature=self.temperature)
+                res = ollama_model.invoke(prompt)
+                latency_ms = (time.time() - start) * 1000
+                if hasattr(res, "response_metadata"):
+                    res.response_metadata["model_provider"] = f"Ollama ({chosen_model})"
+                    res.response_metadata["model_name"] = chosen_model
+                    res.response_metadata["model_location"] = ollama_inst["label"]
+                    res.response_metadata["policy"] = self.policy
+                    res.response_metadata["latency_ms"] = latency_ms
+                    res.response_metadata["fallback"] = True
+                self._record_stats(success=True, latency_ms=latency_ms)
+                return res
+            except Exception as exc:
+                logger.warning(f"Ollama invocation failed: {exc}")
+                return MockModel(self.policy).invoke(prompt)
+        # ChatOllama is not installed - fall back to MockModel
+        return MockModel(self.policy).invoke(prompt)
 
     def _record_stats(self, success: bool, latency_ms: float):
         self._stats.total_invocations += 1
