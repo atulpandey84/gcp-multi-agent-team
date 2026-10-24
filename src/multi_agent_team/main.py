@@ -11,7 +11,7 @@ from multi_agent_team.orchestration.concurrent_engine import (
     initialize_concurrent_engine,
     get_concurrent_engine,
 )
-from multi_agent_team.memory import initialize_memory, get_memory_manager, MemoryManager
+from multi_agent_team.memory import initialize_memory
 from multi_agent_team.api.main import app as api_app
 from multi_agent_team.monitoring.models_sa import Base
 from multi_agent_team.models.provider import initialize_models, get_model_provider
@@ -195,9 +195,16 @@ async def _run_concurrent_workflow(objective: str, agent_ids: Optional[list] = N
 
 
 def main():
-    p = argparse.ArgumentParser(description="Multi-Agent Engineering Organization - Full Specification Implementation")
+    p = argparse.ArgumentParser(
+        description="Multi-Agent Engineering Organization - Full Specification Implementation"
+    )
     p.add_argument("command", nargs="?", default="workflow")
-    p.add_argument("objective", nargs="?", default="Provision a new non-production GCP application environment using approved Landing Zone with security, FinOps, testing and operational controls.")
+    p.add_argument(
+        "objective",
+        nargs="?",
+        default="Provision a new non-production GCP application environment using "
+        "approved Landing Zone with security, FinOps, testing and operational controls.",
+    )
     p.add_argument("--validate-contracts", action="store_true", help="Validate all agent contracts against specification")
     p.add_argument("--list-agents", action="store_true", help="List all registered agents")
     p.add_argument("--author", default="agent_a")
@@ -217,7 +224,9 @@ def main():
         if args.validate_contracts:
             contracts = load_agent_contracts()
             for agent_id, contract in contracts.items():
-                print(f"Agent: {agent_id.value} ({contract.role}) - Team: {contract.team} - Status: Validated")
+                print(
+                    f"Agent: {agent_id.value} ({contract.role}) - Team: {contract.team} - Status: Validated"
+                )
             print(f"\nTotal agents: {len(contracts)} (Specification requires 22)")
             return
 

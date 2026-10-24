@@ -19,9 +19,6 @@ from .base import (
     AgentMemory,
     AgentRole,
     Task,
-    TaskStatus,
-    AgentMessage,
-    QualityGateResult,
     load_agent_contracts,
 )
 from ..models.provider import (

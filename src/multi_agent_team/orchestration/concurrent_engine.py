@@ -18,19 +18,16 @@ from typing import Any, Dict, List, Optional, Set
 
 from ..agents.base import (
     BaseAgent,
-    AgentContract,
     Task,
     TaskStatus,
-    AgentMessage,
     QualityGateResult,
-    load_agent_contracts,
 )
 from ..agents.factory import get_agent_factory, AgentFactory
 from ..models.provider import get_model_provider, ModelProvider
 from ..governance.engine import GovernanceEngine
 from ..memory.manager import get_memory_manager
 from ..agents.collaboration import CollaborationEngine, CollaborationEvidence
-from ..schemas.contracts import CanonicalMessagePayload, WorkflowState, AgentRole
+from ..schemas.contracts import AgentRole
 
 logger = logging.getLogger(__name__)
 
