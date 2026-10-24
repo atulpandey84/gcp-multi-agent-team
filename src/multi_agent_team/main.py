@@ -205,15 +205,36 @@ def main():
         default="Provision a new non-production GCP application environment using "
         "approved Landing Zone with security, FinOps, testing and operational controls.",
     )
-    p.add_argument("--validate-contracts", action="store_true", help="Validate all agent contracts against specification")
-    p.add_argument("--list-agents", action="store_true", help="List all registered agents")
+    p.add_argument(
+        "--validate-contracts",
+        action="store_true",
+        help="Validate all agent contracts against specification",
+    )
+    p.add_argument(
+        "--list-agents", action="store_true", help="List all registered agents"
+    )
     p.add_argument("--author", default="agent_a")
     p.add_argument("--reviewer", default="agent_b")
-    p.add_argument("--no-bootstrap", action="store_true", help="Skip system bootstrap (for testing)")
+    p.add_argument(
+        "--no-bootstrap",
+        action="store_true",
+        help="Skip system bootstrap (for testing)",
+    )
     p.add_argument("--database-url", help="Database URL for persistence")
-    p.add_argument("--concurrent", action="store_true", help="Run agents in concurrence (parallel execution)")
-    p.add_argument("--agents", nargs="*", help="Specific agent IDs for concurrent execution")
-    p.add_argument("--max-concurrent", type=int, default=10, help="Maximum concurrent agent executions")
+    p.add_argument(
+        "--concurrent",
+        action="store_true",
+        help="Run agents in concurrence (parallel execution)",
+    )
+    p.add_argument(
+        "--agents", nargs="*", help="Specific agent IDs for concurrent execution"
+    )
+    p.add_argument(
+        "--max-concurrent",
+        type=int,
+        default=10,
+        help="Maximum concurrent agent executions",
+    )
     args = p.parse_args()
 
     if not args.no_bootstrap:
@@ -225,7 +246,8 @@ def main():
             contracts = load_agent_contracts()
             for agent_id, contract in contracts.items():
                 print(
-                    f"Agent: {agent_id.value} ({contract.role}) - Team: {contract.team} - Status: Validated"
+                    f"Agent: {agent_id.value} ({contract.role}) - Team: "
+                    f"{contract.team} - Status: Validated"
                 )
             print(f"\nTotal agents: {len(contracts)} (Specification requires 22)")
             return
