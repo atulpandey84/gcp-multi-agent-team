@@ -212,6 +212,13 @@ class BaseAgent(ABC):
         self.contract = contract
         self.memory = AgentMemory()
         self._load_institutional_memory()
+        # Infrastructure attributes (set by AgentFactory)
+        self.model: Any = None
+        self.model_provider: Any = None
+        self.tool_registry: Any = None
+        self.governance: Any = None
+        self.memory_manager: Any = None
+        self.collaboration_engine: Any = None
     
     @abstractmethod
     def execute(self, task: Task, context: Dict[str, Any]) -> Dict[str, Any]:

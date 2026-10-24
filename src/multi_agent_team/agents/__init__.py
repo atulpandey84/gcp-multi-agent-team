@@ -1,36 +1,17 @@
-"""
-Agents package for the Multi-Agent Engineering Organization.
-Provides base classes, contracts, and all 22 specialized agent implementations.
-"""
-
-from .base import (
-    AgentRole,
-    AuthorityLevel,
-    TaskStatus,
-    Environment,
-    AgentMemory,
-    AgentAuthority,
-    AgentContract,
-    AgentMessage,
-    Task,
-    QualityGateResult,
-    ApprovalRequest,
-    BaseAgent,
-    load_agent_contracts,
+from .factory import (
+    AgentFactory,
+    GenericOperationalAgent,
+    register_agent_class,
+    get_agent_class,
+    get_agent_factory,
+    initialize_agent_factory,
 )
 
 __all__ = [
-    "AgentRole",
-    "AuthorityLevel",
-    "TaskStatus",
-    "Environment",
-    "AgentMemory",
-    "AgentAuthority",
-    "AgentContract",
-    "AgentMessage",
-    "Task",
-    "QualityGateResult",
-    "ApprovalRequest",
-    "BaseAgent",
-    "load_agent_contracts",
+    "AgentFactory",
+    "GenericOperationalAgent",
+    "register_agent_class",
+    "get_agent_class",
+    "get_agent_factory",
+    "initialize_agent_factory",
 ]

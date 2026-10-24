@@ -11,6 +11,20 @@ class SecurityArchitectAgent(BaseAgent):
 
     def execute(self, task: Task, context: Dict[str, Any]) -> Dict[str, Any]:
         architecture = context.get("architecture", {})
+
+        # Model-based security review
+        model = getattr(self, "model", None)
+        security_review = {}
+        if model:
+            try:
+                prompt = f"""Perform a security review of this GCP architecture:
+{architecture}
+Identify threats, recommend security controls, and assess IAM, encryption, and network security."""
+                review_result = model.invoke(prompt)
+                security_review = {"model_review": str(review_result), "model_used": "architecture_critical"}
+            except Exception as e:
+                security_review = {"model_review_error": str(e), "fallback": "contract_based"}
+
         return {
             "threat_model": self._create_threat_model(),
             "security_requirements": self._define_security_controls(),
@@ -18,6 +32,7 @@ class SecurityArchitectAgent(BaseAgent):
             "security_review_result": "approved",
             "vulnerabilities": [],
             "exceptions": [],
+            "security_review": security_review,
             "status": "security_approved"
         }
 

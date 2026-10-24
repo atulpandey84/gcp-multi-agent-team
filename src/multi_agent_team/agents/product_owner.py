@@ -16,6 +16,20 @@ class ProductOwnerAgent(BaseAgent):
     def execute(self, task: Task, context: Dict[str, Any]) -> Dict[str, Any]:
         """Execute product owner responsibilities."""
         objective = task.objective
+
+        # Model-based requirements analysis
+        model = getattr(self, "model", None)
+        requirements_review = {}
+        if model:
+            try:
+                prompt = f"""Analyze this business objective and define product requirements:
+Objective: {objective}
+Create requirements with acceptance criteria, epics, user stories, and priorities."""
+                req_result = model.invoke(prompt)
+                requirements_review = {"model_requirements": str(req_result), "model_used": "senior_reasoning"}
+            except Exception as e:
+                requirements_review = {"model_requirements_error": str(e), "fallback": "contract_based"}
+
         
         # Step 1: Identify requirements from objective
         requirements = self._analyze_business_objective(objective)
@@ -48,6 +62,7 @@ class ProductOwnerAgent(BaseAgent):
             "epics": epics,
             "dependencies": dependencies,
             "priority": self._determine_priority(requirements),
+            "requirements_review": requirements_review,
             "status": "requirements_complete"
         }
     

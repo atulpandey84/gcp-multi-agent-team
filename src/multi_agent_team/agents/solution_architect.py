@@ -16,6 +16,20 @@ class SolutionArchitectAgent(BaseAgent):
         requirements = context.get("requirements", [])
         business_objective = context.get("business_objective", "")
 
+        # Model-based solution design
+        model = getattr(self, "model", None)
+        design_review = {}
+        if model:
+            try:
+                prompt = f"""Design a solution architecture for these requirements:
+{requirements}
+Business Objective: {business_objective}
+Define application boundaries, API patterns, data flows, NFRs, and technology stack."""
+                design_result = model.invoke(prompt)
+                design_review = {"model_design": str(design_result), "model_used": "architecture_critical"}
+            except Exception as e:
+                design_review = {"model_design_error": str(e), "fallback": "contract_based"}
+
         # Step 1: Translate requirements into solution architecture
         solution_design = self._design_solution(requirements)
 
@@ -61,6 +75,7 @@ class SolutionArchitectAgent(BaseAgent):
             "technology_stack": technology_stack,
             "architecture_diagrams": architecture_diagrams,
             "adrs": adrs,
+            "design_review": design_review,
             "status": "architecture_complete"
         }
 

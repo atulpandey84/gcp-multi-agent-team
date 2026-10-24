@@ -34,6 +34,22 @@ class PlatformArchitectAgent(BaseAgent):
         # Step 6: Define Terraform module structure
         terraform_modules = self._define_terraform_modules()
 
+        # Step 7: Model-based architecture review (if model available)
+        model = getattr(self, "model", None)
+        architecture_review = {}
+        if model:
+            try:
+                prompt = f"""Review this GCP platform architecture for {environment_type} environment in {region}:
+Resource Hierarchy: {resource_hierarchy}
+Network Design: {network_design}
+IAM Model: {iam_model}
+Org Policies: {org_policies}
+Provide recommendations for security, scalability, and cost optimization."""
+                review_result = model.invoke(prompt)
+                architecture_review = {"model_review": str(review_result), "model_used": "architecture_critical"}
+            except Exception as e:
+                architecture_review = {"model_review_error": str(e), "fallback": "contract_based"}
+
         # Record decisions
         self.record_decision({
             "type": "platform_architecture_designed",
@@ -55,6 +71,7 @@ class PlatformArchitectAgent(BaseAgent):
             "terraform_modules": terraform_modules,
             "high_availability": self._define_ha_strategy(),
             "disaster_recovery": self._define_dr_strategy(environment_type),
+            "architecture_review": architecture_review,
             "status": "platform_designed"
         }
 
