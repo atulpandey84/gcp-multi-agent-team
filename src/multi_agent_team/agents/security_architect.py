@@ -3,7 +3,7 @@ Security Architect Agent - Section 6.6
 Ensures security-by-design, compliance, identity protection, data protection, and risk control.
 """
 from typing import Dict, Any, List
-from .base import BaseAgent, Task, AgentContract
+from .base import BaseAgent, Task, AgentContract, AgentAuthority, AgentMemory
 
 
 class SecurityArchitectAgent(BaseAgent):

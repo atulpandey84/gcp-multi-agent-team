@@ -180,7 +180,7 @@ CI_CD_ENGINEER_CONTRACT = AgentContract(
     non_responsibilities=["Application code changes", "Production database deployment"],
     authority=AgentAuthority(
         autonomous=["Build pipeline templates", "Generate deployment pipelines"],
-        peer_approval=["Pipeline security",
+        peer_approval=["Pipeline security"],
         human_approval=["Production deployments", "Dangerous pipeline changes"]
     ),
     capabilities=["Cloud Build", "GitHub/GitLab", "Artifact Registry", "Terraform", "Security scanners"],

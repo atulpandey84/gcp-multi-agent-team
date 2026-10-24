@@ -90,7 +90,7 @@ PRODUCTION_RELIABILITY_ENGINEER_CONTRACT = AgentContract(
     authority=AgentAuthority(autonomous=["Production monitoring", "Reliability analysis", "Deployment validation"], peer_approval=["Capacity planning"], human_approval=["Production actionable decisions"],),
     capabilities=["Production monitoring", "Reliability analysis", "Capacity planning", "Performance analysis", "Incident analysis", "Deployment validation", "Reliability improvements"],
     tools=["GCP Monitoring", "Logging", "Trace", "Deployment systems", "Terraform", "Kubernetes"],
-    memory=AgentMemory(working=["Current telemetry"], project=["SLOs", "Incidents", "Capacity", "Production topology"], institutional=["Reliability trends", "SLO history"],
+    memory=AgentMemory(working=["Current telemetry"], project=["SLOs", "Incidents", "Capacity", "Production topology"], institutional=["Reliability trends", "SLO history"]),
     inputs=["Telemetry", "Incidents", "Releases", "SRE recommendations"],
     outputs=["Reliability reports", "Remediation tasks", "Operational changes", "Readiness evidence"],
     definition_of_done=["Health verified", "SLO impact understood", "Monitoring active", "Alerts validated", "Rollback available", "Capacity impact understood", "Documentation updated"],

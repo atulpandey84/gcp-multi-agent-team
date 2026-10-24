@@ -4,7 +4,7 @@ Owns product vision, business value, scope, prioritization, acceptance, and stak
 """
 
 from typing import Dict, Any, List
-from .base import BaseAgent, Task, AgentContract, AgentMessage, QualityGateResult
+from .base import BaseAgent, Task, AgentContract, AgentMessage, QualityGateResult, AgentAuthority, AgentMemory
 
 
 class ProductOwnerAgent(BaseAgent):

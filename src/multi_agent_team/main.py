@@ -5,17 +5,17 @@ from typing import Optional
 
 sys.path.insert(0, '.')
 
-from src.multi_agent_team.agents.base import load_agent_contracts
-from src.multi_agent_team.orchestration.engine import run_multi_agent_workflow
-from src.multi_agent_team.orchestration.concurrent_engine import (
+from multi_agent_team.agents.base import load_agent_contracts
+from multi_agent_team.orchestration.engine import run_multi_agent_workflow
+from multi_agent_team.orchestration.concurrent_engine import (
     initialize_concurrent_engine,
     get_concurrent_engine,
 )
-from src.multi_agent_team.memory import initialize_memory, get_memory_manager, MemoryManager
-from src.multi_agent_team.api.main import app as api_app
-from src.multi_agent_team.monitoring.models_sa import Base
-from src.multi_agent_team.models.provider import initialize_models, get_model_provider
-from src.multi_agent_team.agents.factory import initialize_agent_factory, get_agent_factory
+from multi_agent_team.memory import initialize_memory, get_memory_manager, MemoryManager
+from multi_agent_team.api.main import app as api_app
+from multi_agent_team.monitoring.models_sa import Base
+from multi_agent_team.models.provider import initialize_models, get_model_provider
+from multi_agent_team.agents.factory import initialize_agent_factory, get_agent_factory
 from sqlalchemy import create_engine
 import os
 

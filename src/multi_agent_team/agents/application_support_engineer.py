@@ -13,7 +13,7 @@ APP_SUPPORT_CONTRACT = AgentContract(
     authority=AgentAuthority(autonomous=["Incident diagnosis", "Workaround creation"], peer_approval=["Root cause analysis"], human_approval=["Production changes", "External communication"]),
     capabilities=["Log analysis", "API troubleshooting", "Root cause analysis", "Knowledge management"],
     tools=["Cloud Logging", "Monitoring", "Tracing", "Application logs", "Databases", "Ticketing"],
-    memory=AgentMemory(working=["Current incident context"], project=["Known errors", "Troubleshooting procedures", "Incident history"], institutional=["Support practices", "Incident analysis"],
+    memory=AgentMemory(working=["Current incident context"], project=["Known errors", "Troubleshooting procedures", "Incident history"], institutional=["Support practices", "Incident analysis"]),
     inputs=["Incidents", "Logs", "Traces", "User reports", "Alerts"],
     outputs=["Incident diagnosis", "Workaround", "Root cause", "Escalation package"],
     collaborators=["application_management_lead", "production_reliability_engineer", "development_lead"],

@@ -567,6 +567,13 @@ class WorkflowRuntime:
                     run.status = "blocked"
                     self._emit(run, "workflow_blocked", {"reason": run.provisioning["reason"]})
                     return
+                provision_result = self._provisioner(terraform_root)
+                run.provisioning.update({"status": "completed" if provision_result.get("passed") else "failed", "result": provision_result})
+                _write_artifact(run, "provisioning.json", run.provisioning)
+                if not provision_result.get("passed"):
+                    run.status = "failed"
+                    self._emit(run, "workflow_failed", {"reason": provision_result.get("reason", "Terraform apply failed")})
+                    return
             run.status = "completed"
 
             # --- NEW: Generate Final Presentation Artifact ---
@@ -588,23 +595,6 @@ class WorkflowRuntime:
             run.artifacts["presentation_path"] = presentation_path # Store the path as a final artifact
             # -------------------------------------------------
 
-            run.progress = 100
-            run.current_task_id = None
-            _write_artifact(run, "final-evidence.json", {"status": run.status, "gates": run.gates, "artifacts": run.artifacts})
-            self._emit(run, "workflow_completed", {"artifacts": run.artifacts})
-        except asyncio.CancelledError:
-                provision_result = self._provisioner(terraform_root)
-                run.provisioning.update({"status": "completed" if provision_result.get("passed") else "failed", "result": provision_result})
-                _write_artifact(run, "provisioning.json", run.provisioning)
-                if not provision_result.get("passed"):
-                    run.status = "failed"
-                    self._emit(run, "workflow_failed", {"reason": provision_result.get("reason", "Terraform apply failed")})
-                    return
-            release = {"name": "release", "status": "passed", "evidence": run.artifacts}
-            run.gates.append(release)
-            _write_artifact(run, "gate-release.json", release)
-            self._emit(run, "quality_gate", release)
-            run.status = "completed"
             run.progress = 100
             run.current_task_id = None
             _write_artifact(run, "final-evidence.json", {"status": run.status, "gates": run.gates, "artifacts": run.artifacts})

@@ -1,12 +1,82 @@
-We need to analyze the user input: It's a request: they gave a bunch of code for a "Quality Gate Framework per Section 15 of MULTI_AGENT_TEAM_SPECIFICATION.md" then they include the request: "Apply the SUGGESTED EDIT to the ORIGINAL CODE. Output the complete modified file." Then they gave a command: `python3 -c " with open('MULTI_AGENT_TEAM_SPECIFICATION.md', 'r', encoding='latin-1') as f: lines = f.readlines() for i, line in enumerate(lines[800:1200], start=801): print(f'{i}: {line.strip()}') "`
+"""
+Quality Gate Framework per Section 15 of MULTI_AGENT_TEAM_SPECIFICATION.md.
+Implements blocking quality gates for security, testing, FinOps, and compliance.
+"""
 
-Thus the user wants to output the modified file with certain changes (maybe they want to add something). The user input appears safe: they are just asking to modify code. There's no harmful content. The assistant hasn't responded yet; they gave only a command. According to ground truth, User Safety label: safe. Response Safety label: None (no assistant response). So we need to output:
-
-User Safety: safe
-Response Safety: safe? But they said "Omit if no assistant response present." Since there is no assistant response in the conversation, we should omit Response Safety line? The format: "User Safety: safe or unsafe rating of the user input\nResponse Safety: safe or unsafe rating of the assistant response. Omit if no assistant response present." So we output only "User Safety: safe". Probably just that.
-
-Thus final answer: "User Safety: safe".
+from typing import Any, Dict
 
 
-User Safety: safe
+def validate_quality_gates(gate_name: str, metrics: Dict[str, Any]) -> Dict[str, Any]:
+    """Enforce quality gate metrics.
 
+    Returns a dict with keys:
+        - passed: bool
+        - reason: str
+    """
+    if gate_name == "security":
+        critical_vulnerabilities = metrics.get("critical_vulnerabilities", 0)
+        if critical_vulnerabilities > 0:
+            return {
+                "passed": False,
+                "reason": f"Security quality gate failed: {critical_vulnerabilities} critical vulnerabilities found.",
+            }
+        return {"passed": True, "reason": "Security quality gate passed: no critical vulnerabilities."}
+
+    elif gate_name == "testing":
+        coverage = metrics.get("test_coverage", 0.0)
+        if coverage < 80.0:
+            return {
+                "passed": False,
+                "reason": f"Testing quality gate failed: coverage {coverage}% is below threshold 80.0%.",
+            }
+        return {"passed": True, "reason": f"Testing quality gate passed: coverage {coverage}% >= 80.0%."}
+
+    elif gate_name == "finops":
+        estimated_cost = metrics.get("monthly_cost", 0.0)
+        budget_limit = metrics.get("budget_limit", 10000.0)
+        if estimated_cost > budget_limit:
+            return {
+                "passed": False,
+                "reason": f"FinOps quality gate failed: cost ${estimated_cost} exceeds budget limit ${budget_limit}.",
+            }
+        return {
+            "passed": True,
+            "reason": f"FinOps quality gate passed: cost ${estimated_cost} within budget ${budget_limit}.",
+        }
+
+    elif gate_name == "compliance":
+        passed_controls = metrics.get("passed_controls", 0)
+        total_controls = metrics.get("total_controls", 0)
+        if total_controls > 0 and passed_controls < total_controls:
+            return {
+                "passed": False,
+                "reason": f"Compliance quality gate failed: {passed_controls}/{total_controls} controls passed.",
+            }
+        return {"passed": True, "reason": "Compliance quality gate passed: all controls satisfied."}
+
+    else:
+        return {"passed": True, "reason": f"Quality gate '{gate_name}' passed (default)."}
+
+
+def evaluate_gate_set(gate_metrics: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
+    """Evaluate a set of quality gates.
+
+    Returns:
+        dict with keys:
+            - passed: bool (all gates passed)
+            - failed: list of gate names that failed
+            - results: dict of gate_name -> result
+    """
+    failed = []
+    results = {}
+    for gate_name, metrics in gate_metrics.items():
+        result = validate_quality_gates(gate_name, metrics)
+        results[gate_name] = result
+        if not result["passed"]:
+            failed.append(gate_name)
+
+    return {
+        "passed": len(failed) == 0,
+        "failed": failed,
+        "results": results,
+    }

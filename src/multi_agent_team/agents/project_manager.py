@@ -1,4 +1,4 @@
-https://integrate.api.nvidia.com/v1"""
+"""
 Project Manager Agent - Section 6.2
 Owns delivery coordination, planning, dependency management, risk management, milestones, and delivery reporting.
 """
