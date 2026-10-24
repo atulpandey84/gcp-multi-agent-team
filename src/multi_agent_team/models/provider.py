@@ -109,10 +109,12 @@ def trigger_ollama_pull(url: str, model_name: str) -> bool:
 
 
 def select_best_ollama_instance() -> dict:
+    localhost_url = os.getenv("OLLAMA_LOCALHOST_URL", "http://localhost:11434").rstrip("/")
     local_url = os.getenv("OLLAMA_LOCAL_URL", "http://192.168.31.135:11434").rstrip("/")
     remote_url = os.getenv("OLLAMA_REMOTE_URL", "http://192.168.31.63:11434").rstrip("/")
 
     candidates = [
+        {"url": localhost_url, "label": f"Localhost Ollama ({localhost_url.replace('http://', '')})", "is_gpu": True, "score": 0, "available_models": []},
         {"url": local_url, "label": f"Local GPU/CPU ({local_url.replace('http://', '')})", "is_gpu": True, "score": 0, "available_models": []},
         {"url": remote_url, "label": f"Remote CPU ({remote_url.replace('http://', '')})", "is_gpu": False, "score": 0, "available_models": []},
     ]
@@ -271,6 +273,18 @@ class MockModel:
         return await loop.run_in_executor(None, self.invoke, prompt, **kwargs)
 
 
+# Ollama model mapping per policy - uses locally available Ollama models
+OLLAMA_MODEL_MAP = {
+    "architecture_critical": "qwen3:14b",
+    "senior_reasoning": "qwen3:14b",
+    "coding": "zarigata/unfiltered-llama3:latest",
+    "fast_agent": "zarigata/unfiltered-llama3:latest",
+    "fast_coding": "zarigata/unfiltered-llama3:latest",
+    "embedding": "qwen3:14b",
+    "reranker": "qwen3:14b",
+}
+
+
 class SmartFallbackModel:
     """Wraps a primary NVIDIA model with Ollama fallback on failure."""
 
@@ -283,6 +297,7 @@ class SmartFallbackModel:
         self.temperature = cfg.get("temperature", 0.1)
         self.max_tokens = cfg.get("max_tokens", cfg.get("max_completion_tokens", 4096))
         self.timeout = cfg.get("timeout", int(os.getenv("MODEL_TIMEOUT", "120")))
+        self.ollama_model = OLLAMA_MODEL_MAP.get(policy, "qwen3:14b")
         self._stats = ModelStats()
 
     def invoke(self, prompt: str, **kwargs) -> Any:
@@ -315,7 +330,7 @@ class SmartFallbackModel:
             try:
                 ollama_inst = select_best_ollama_instance()
                 target_url = ollama_inst["url"]
-                requested_model = self.cfg.get("ollama_model", "llama3")
+                requested_model = self.ollama_model
                 available_models = ollama_inst.get("available_models") or fetch_ollama_tags(target_url)
 
                 chosen_model = None
